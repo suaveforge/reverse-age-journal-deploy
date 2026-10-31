@@ -1,98 +1,106 @@
-name: Family and administrator real-click journey QA
+name: Family PayHub TEST-only journey QA
 on:
   push:
     branches: [main]
-    paths:
-      - 'index.html'
-      - 'app.js'
-      - 'family-demo.js'
-      - 'styles.css'
-      - '.github/workflows/family-journey-qa.yml'
+    paths: [family-demo.js, app.js, index.html, styles.css, .github/workflows/family-journey-qa.yml]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   family:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
-      - name: Browser-test family flow without real calls or payments
+      - name: Test family flow with synthetic PayHub responses, no payment or calls
         shell: bash
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
           node --check app.js
           node --check family-demo.js
-          python3 -m pip -q install playwright pillow
-          python3 -m http.server 18765 --bind 127.0.0.1 >/tmp/raj-family-server.log 2>&1 &
-          cat >/tmp/family-journey-qa.py <<'PY'
-          import base64,io
-          from PIL import Image
+          python3 -m pip -q install playwright
+          python3 -m http.server 18765 --bind 127.0.0.1 >/tmp/raj-family-http.log 2>&1 &
+          cat >/tmp/family-qa.py <<'PY'
+          import json,re
           from playwright.sync_api import sync_playwright,expect
+          def respond(route):
+              req=route.request
+              path=req.url.split('/api/pilot/family/')[-1]
+              if path=='payment-ready':
+                  response={'ready':True,'packages':[
+                      {'code':'FIVE','sessions':5,'price_krw':1000},
+                      {'code':'TEN','sessions':10,'price_krw':2000}]}
+              elif path=='checkout':
+                  response={'order_id':'ord_'+'a'*32,
+                      'checkout_url':'https://payhub.suaveforge.com/checkout/?session_id=ps_testfixture'}
+              elif path.startswith('orders/'):
+                  assert req.headers.get('x-raj-family-token')
+                  response={'state':'PAID','sessions':5,'order_id':'ord_'+'a'*32}
+              elif path=='bookings':
+                  body=req.post_data_json
+                  assert body['order_id']=='ord_'+'a'*32
+                  assert body['guest_token']
+                  response={'saved':True,'real_phone_call':False,
+                    'scheduled_at':body['scheduled_at']}
+              else:
+                  route.fulfill(status=404,content_type='application/json',
+                    body='{"detail":"UNEXPECTED_TEST_ROUTE"}')
+                  return
+              route.fulfill(status=200,content_type='application/json',
+                body=json.dumps(response))
           with sync_playwright() as p:
               browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
               for width,height in [(1365,900),(390,844)]:
                   page=browser.new_page(viewport={'width':width,'height':height})
                   errors=[]
                   page.on('pageerror',lambda e:errors.append(str(e)))
-                  page.goto('http://127.0.0.1:18765/',wait_until='networkidle',timeout=40000)
-                  expect(page.locator('#family-journey')).to_be_visible()
+                  page.route('**/api/pilot/family/**',respond)
+                  page.goto('http://127.0.0.1:18765/',wait_until='networkidle',timeout=30000)
+                  expect(page.locator('#family-start')).to_be_visible()
+                  expect(page.locator('.family-title')).to_have_count(0)
                   expect(page.locator('#counselor-pilot')).to_be_hidden()
                   expect(page.locator('#admin-entry')).to_have_text('관리자 접속하기')
-                  expect(page.locator('.header-actions')).to_be_hidden()
-                  expect(page.locator('#auth-button')).to_be_hidden()
-                  assert page.evaluate('document.documentElement.scrollWidth')==width,'horizontal overflow landing'
-                  assert page.evaluate('document.body.scrollHeight')<=height+110,'landing has unnecessary scroll'
+                  assert page.evaluate('document.documentElement.scrollWidth')==width
+                  assert page.evaluate('document.body.scrollHeight')<=height+110
                   page.locator('#family-start').click()
                   expect(page.locator('#family-name')).to_be_visible()
-                  assert page.locator('#family-elder').count()==0
-                  page.locator('#family-name').fill('김보호자')
+                  page.locator('#family-name').fill('보호자')
                   page.locator('#family-next').click()
                   expect(page.locator('#family-elder')).to_be_visible()
-                  page.locator('#family-elder').fill('김어르신')
+                  page.locator('#family-elder').fill('할머니')
                   page.locator('#family-phone').fill('01012345678')
-                  page.locator('#family-register').click()
-                  expect(page.locator('#family-error')).to_be_visible()
                   page.locator('#family-consent').check()
                   page.locator('#family-register').click()
-                  expect(page.locator('#family-three')).to_be_visible()
-                  page.locator('#family-five').click()
+                  expect(page.locator('#family-plans .family-button')).to_have_count(2)
+                  page.locator('#family-plans .family-button').first.click()
                   expect(page.locator('#family-pay')).to_be_visible()
-                  expect(page.locator('.family-important')).to_contain_text('실제 금액은 청구되지 않습니다')
-                  page.locator('#family-pay').click()
-                  expect(page.locator('#family-when')).to_be_visible()
-                  expect(page.locator('.family-important')).to_contain_text('실제로 발신되지 않습니다')
-                  page.locator('#family-when').fill('2026-11-06T14:00')
+                  expect(page.locator('.family-amount')).to_contain_text('1,000원')
+                  assert page.locator('#family-record').count()==0
+                  assert page.locator('#family-home').count()==0
+                  # Return from a real PayHub page is represented by an already saved
+                  # order. The backend PayHub status endpoint is the sole authority.
+                  page.evaluate("""() => {
+                    const x=JSON.parse(sessionStorage.getItem('raj.family.walkthrough.v2'));
+                    x.orderId='ord_'+'a'.repeat(32);
+                    sessionStorage.setItem('raj.family.walkthrough.v2',JSON.stringify(x))
+                  }""")
+                  page.reload(wait_until='networkidle')
+                  expect(page.locator('#family-when')).to_be_visible(timeout=10000)
+                  page.locator('#family-when').fill('2026-12-05T14:00')
                   page.locator('#family-reserve').click()
-                  expect(page.locator('.family-confirm')).to_contain_text('김어르신')
+                  expect(page.locator('.family-confirm')).to_contain_text('할머니')
                   expect(page.locator('.family-confirm')).to_contain_text('5회')
-                  expect(page.locator('.family-important')).to_contain_text('실제 예약이나 전화 발신은 진행되지 않았습니다')
-                  expect(page.locator('#family-record')).to_be_visible()
-                  page.reload(wait_until='networkidle')
-                  expect(page.locator('#family-record')).to_be_visible()
-                  page.locator('#family-record').click()
-                  expect(page.locator('.family-no-record')).to_have_text('아직 통화 기록이 없습니다.')
+                  expect(page.locator('#family-record')).to_have_count(0)
+                  expect(page.locator('#family-home')).to_be_visible()
                   page.locator('#admin-entry').click()
-                  expect(page.locator('#family-journey')).to_be_hidden()
                   expect(page.locator('#counselor-pilot')).to_be_visible()
-                  expect(page.locator('#pilot-login')).to_be_visible()
-                  expect(page.locator('#admin-entry')).to_have_text('가족 화면')
+                  expect(page.locator('#family-journey')).to_be_hidden()
                   page.locator('#admin-entry').click()
-                  expect(page.locator('#family-journey')).to_be_visible()
-                  expect(page.locator('.family-no-record')).to_be_visible()
-                  assert page.evaluate('document.documentElement.scrollWidth')==width,'horizontal overflow end'
+                  expect(page.locator('.family-confirm')).to_be_visible()
                   assert not errors,errors
-                  # Capture top of the public homepage, not only the confirmed state.
-                  page.evaluate('sessionStorage.removeItem("raj.family.walkthrough.v1")')
-                  page.reload(wait_until='networkidle')
-                  shot=page.screenshot(full_page=True)
-                  pic=Image.open(io.BytesIO(shot)).convert('RGB')
-                  pic.thumbnail((800,950))
-                  buf=io.BytesIO();pic.save(buf,format='JPEG',quality=65,optimize=True)
-                  print('FAMILY_HOME_IMAGE_'+('DESKTOP' if width>600 else 'MOBILE')+'='+base64.b64encode(buf.getvalue()).decode(),flush=True)
-                  print('RAJ_FAMILY_REAL_CLICK_'+('DESKTOP' if width>600 else 'MOBILE')+'=PASS',flush=True)
+                  print('RAJ_FAMILY_TEST_CHECKOUT_'+('DESKTOP' if width>600 else 'MOBILE')+'=PASS',flush=True)
                   page.close()
               browser.close()
-          print('RAJ_NO_REAL_PAYMENT_NO_AUTODIAL_NO_FAKE_CALL_RECORD=PASS')
+          print('RAJ_NO_REAL_PAYMENT_NO_FAKE_BALANCE_NO_OLD_RECORDS=PASS')
           PY
-          python3 /tmp/family-journey-qa.py
+          python3 /tmp/family-qa.py

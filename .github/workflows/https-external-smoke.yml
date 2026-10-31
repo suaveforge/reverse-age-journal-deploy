@@ -20,6 +20,15 @@ jobs:
           echo "RAJ_EXPECTED_USER_URL=https://$FRONT"
           echo "RAJ_API_ORIGIN=https://$API:18461"
           getent ahostsv4 "$FRONT" | head -2 || true
+          curl -fsS --max-time 16 "https://$API:18461/api/pilot/healthz" | grep -q '"ok":true'
+          echo 'RAJ_HIGHPORT_API_HTTPS=PASS'
+          curl -fsSI --max-time 12 -X OPTIONS -H "Origin: https://$FRONT" \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: x-raj-counselor-code,content-type' \
+            "https://$API:18461/api/pilot/verify" -o /tmp/raj-headers
+          grep -Fiq "Access-Control-Allow-Origin: https://$FRONT" /tmp/raj-headers
+          echo 'RAJ_PAGES_TO_API_CORS=PASS'
+
           ok=0
           for attempt in 1 2 3 4 5 6; do
             if curl -fsSL --max-time 12 "https://$FRONT/" -o /tmp/raj.html && grep -q 'Reverse Age Journal' /tmp/raj.html; then
@@ -33,11 +42,3 @@ jobs:
             exit 40
           fi
           echo 'RAJ_CLEAN_PAGES_HTTPS=PASS'
-          curl -fsS --max-time 16 "https://$API:18461/api/pilot/healthz" | grep -q '"ok":true'
-          echo 'RAJ_HIGHPORT_API_HTTPS=PASS'
-          curl -fsSI --max-time 12 -X OPTIONS -H "Origin: https://$FRONT" \
-            -H 'Access-Control-Request-Method: POST' \
-            -H 'Access-Control-Request-Headers: x-raj-counselor-code,content-type' \
-            "https://$API:18461/api/pilot/verify" -o /tmp/raj-headers
-          grep -Fiq "Access-Control-Allow-Origin: https://$FRONT" /tmp/raj-headers
-          echo 'RAJ_PAGES_TO_API_CORS=PASS'

@@ -74,7 +74,9 @@
       window.dispatchEvent(new Event("raj:pilot-connected"));
       status("연결됐습니다. 어르신을 등록하거나 선택하고 통화를 시작하세요.","ok");
       setWorking(false);
-      await loadDiaries();
+      // Diary retrieval can fail independently of successful operator verification.
+      // Do not invalidate the verified operator code on a secondary API error.
+      await loadDiaries().catch(e=>status("연결됐으나 기존 일기는 조회되지 않았습니다: "+errorMessage(e),"error"));
       if(currentCallId){
         $("pilot-call-id").textContent="최근 통화: "+currentCallId;
         show($("pilot-results"),true);

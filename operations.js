@@ -174,13 +174,59 @@
     await loadSubjects();
     await outbox();
   }
+  let billingReady=false;
+  const billing=(path,options)=>window.RAJ_BILLING_REQUEST(path,options);
+  async function loadBilling(){
+    const data=await billing('/packages');
+    billingReady=data.payhub_ready===true;
+    $('ops-payhub-status').textContent=billingReady?
+      'PayHub 연결됨. 상품 금액을 확인한 뒤 결제 링크를 생성할 수 있습니다.':
+      'PayHub 운영 프로젝트가 아직 연결되지 않았습니다. 결제 링크는 비활성화되어 있습니다.';
+    $('ops-pay-checkout').disabled=!billingReady;
+    const item=(data.packages||[]).find(x=>x.package_code===$('ops-pay-package').value);
+    $('ops-pay-price').value=item?String(item.price_krw):'';
+    $('ops-pay-active').value=item&&item.active?'true':'false';
+  }
+  async function savePackage(){
+    const amount=Number($('ops-pay-price').value);
+    if(!Number.isSafeInteger(amount)||amount<100||amount>10000000){
+      feedback('정확한 판매 가격을 입력해 주세요.',true);return;
+    }
+    await billing('/packages',{method:'PUT',body:JSON.stringify({
+      package_code:$('ops-pay-package').value,price_krw:amount,
+      active:$('ops-pay-active').value==='true'
+    })});
+    await loadBilling();
+    feedback('상품을 저장했습니다. PayHub 연결 전에는 실제 결제를 받을 수 없습니다.');
+  }
+  async function createCheckout(){
+    if(!selected){feedback('어르신을 먼저 선택해 주세요.',true);return;}
+    if(!billingReady){feedback('PayHub 운영 연결이 필요합니다.',true);return;}
+    if(!confirm('표시된 금액으로 실제 결제 링크를 만들까요?'))return;
+    const result=await billing('/checkout',{method:'POST',body:JSON.stringify({
+      subject_id:selected,package_code:$('ops-pay-package').value
+    })});
+    $('ops-pay-link').value=result.checkout_url;
+    $('ops-pay-link').hidden=false;
+    $('ops-pay-copy').hidden=false;
+    feedback('PayHub 결제 링크를 생성했습니다. 승인된 결제 완료 후 회기가 충전됩니다.');
+  }
   async function connected(){
     $('pilot-management').hidden=false;
     $('ops-report-month').value=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}).slice(0,7);
     await safe(reload);
+    await safe(loadBilling);
   }
   function bind(id,handler){$(id).addEventListener('click',()=>safe(handler));}
   bind('ops-add',addSubject);
+  bind('ops-pay-save',savePackage);
+  bind('ops-pay-checkout',createCheckout);
+  bind('ops-pay-copy',async()=>{
+    await navigator.clipboard.writeText($('ops-pay-link').value);
+    feedback('결제 링크를 복사했습니다.');
+  });
+  $('ops-pay-package').addEventListener('change',()=>safe(loadBilling));
+
   bind('ops-trial',trial);
   bind('ops-book',book);
   bind('ops-report',report);

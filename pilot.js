@@ -301,6 +301,7 @@
   }
   function bind(id,handler){$(id).addEventListener("click",()=>{Promise.resolve(handler()).catch(e=>status(errorMessage(e),"error"));});}
   window.RAJ_OPERATIONS_REQUEST=(path,options)=>api("/operations"+path,options);
+  window.RAJ_BILLING_REQUEST=(path,options)=>api("/billing"+path,options);
   window.RAJ_SELECTED_SUBJECT="";
   window.RAJ_CREDITS_AVAILABLE=false;
   window.RAJ_REFRESH_CALL_BUTTON=()=>setWorking(false);

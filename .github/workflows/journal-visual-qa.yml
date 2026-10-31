@@ -1,0 +1,60 @@
+name: Journal visual QA desktop mobile
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/journal-visual-qa.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Run real-browser layout and interaction checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright pillow
+          cat >/tmp/raj_visual.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          from PIL import Image
+          import io, base64, json
+          URL='https://reverse-age-journal.suaveforge.com:18461/'
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+              for kind,w,h in [('desktop',1365,900),('mobile',390,844)]:
+                  page=browser.new_page(viewport={'width':w,'height':h},device_scale_factor=1)
+                  response=page.goto(URL,wait_until='networkidle',timeout=45000)
+                  page.locator('#hero-title').wait_for()
+                  page.evaluate('document.fonts.ready')
+                  page.screenshot(path='/tmp/raj-'+kind+'.png',full_page=True)
+                  sz=page.evaluate('''() => ({
+                    viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+                    title: document.querySelector('h1')?.innerText,
+                    primaryButtons: [...document.querySelectorAll('.hero-actions button')].map(x=>({text:x.innerText.trim(),height:Math.round(x.getBoundingClientRect().height)})),
+                    nav: [...document.querySelectorAll('[data-view]')].map(x=>x.innerText.trim()),
+                    readiness: document.querySelector('#readiness')?.innerText
+                  })''')
+                  print('RAJ_VISUAL_'+kind.upper()+'='+json.dumps({'status':response.status,'geometry':sz},ensure_ascii=False),flush=True)
+                  assert response.status==200
+                  assert sz['viewport']==sz['scrollWidth'], 'horizontal overflow '+kind
+                  assert len(sz['primaryButtons'])==2
+                  assert all(x['height']>=65 for x in sz['primaryButtons'])
+                  page.locator('[data-view="operator"]').click()
+                  assert page.locator('#operator-view').is_visible()
+                  assert not page.locator('#family-view').is_visible()
+                  page.locator('[data-view="family"]').click()
+                  assert page.locator('#family-view').is_visible()
+                  if kind=='mobile':
+                      page.locator('#start-button').click()
+                      assert page.locator('#readiness').is_visible()
+                  image=Image.open('/tmp/raj-'+kind+'.png').convert('RGB')
+                  image.thumbnail((800,1100))
+                  buf=io.BytesIO()
+                  image.save(buf,format='JPEG',quality=60,optimize=True)
+                  print('RAJ_JPEG_'+kind.upper()+'='+base64.b64encode(buf.getvalue()).decode(),flush=True)
+                  page.close()
+              browser.close()
+          print('RAJ_VISUAL_BROWSER_QA=PASS')
+          PY
+          python3 /tmp/raj_visual.py

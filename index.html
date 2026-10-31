@@ -18,9 +18,10 @@
   <script defer src="./app.js"></script>
   <script defer src="./pilot.js"></script>
   <script defer src="./operations.js"></script>
+  <script defer src="./family-demo.js"></script>
 </head>
 <body>
-  <div class="page counselor-mode">
+  <div class="page family-mode">
     <header class="site-header">
       <a class="wordmark" href="./" aria-label="Reverse Age Journal 홈">
         <strong>기쁜사이</strong>
@@ -33,10 +34,12 @@
         </nav>
         <button type="button" id="auth-button" class="login-button">로그인</button>
       </div>
+      <button type="button" id="admin-entry" class="admin-entry">관리자 접속</button>
     </header>
 
     <main class="main">
       <div id="readiness" class="readiness" role="status" hidden></div>
+      <section id="family-journey" class="family-journey" aria-label="가족 이용 체험"></section>
       <section class="hero" aria-labelledby="hero-title" hidden aria-hidden="true">
         <h1 id="hero-title">전화로 나눈 하루,<br><span>일기로 남깁니다.</span></h1>
         <p class="hero-subtitle">어르신은 전화로 이야기하고, 가족은 일기로 읽습니다.</p>
@@ -54,7 +57,7 @@
 
 
 
-      <section id="counselor-pilot" class="pilot-section" aria-labelledby="pilot-section-title">
+      <section id="counselor-pilot" class="pilot-section" hidden aria-labelledby="pilot-section-title">
         <div class="pilot-section-head">
           <h2 id="pilot-section-title">상담사</h2>
           

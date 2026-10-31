@@ -4,7 +4,7 @@ Public, static, credential-free frontend for the independent Reverse Age Journal
 
 ## Preview
 
-Once GitHub Pages is enabled for this repository, the pages can be viewed at the repository's Pages URL. Until then, open `index.html` with a local static HTTP server.
+GitHub Pages is enabled and built. Spaceship CNAME is set for `reverse-age-journal.suaveforge.com`; HTTP 200 was verified on 2026-10-31. HTTPS certificate issuance is still pending verification. Until HTTPS is available, use this only as a read-only preview; do not enter personal information.
 
 No customer data or simulated payment success is embedded in the site. Before backend configuration, the page is a **read-only preview**.
 

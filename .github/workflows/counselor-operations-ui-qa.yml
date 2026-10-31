@@ -21,7 +21,7 @@ jobs:
           import json,re,io,base64
           from PIL import Image
           from playwright.sync_api import sync_playwright,expect
-          URL='http://127.0.0.1:18761/?mode=counselor'
+          URL='http://127.0.0.1:18761/'
           state={'created':False,'credits':0,'bookings':[],'profile':None}
           def fulfill(route):
               req=route.request
@@ -84,6 +84,11 @@ jobs:
                   page.route('**/api/pilot/**',fulfill)
                   r=page.goto(URL,wait_until='networkidle',timeout=40000)
                   assert r.status==200
+                  assert page.locator('.hero').is_hidden()
+                  assert page.locator('.header-actions').is_hidden()
+                  assert page.locator('#workspace').is_hidden()
+                  assert page.locator('#pilot-login').is_visible()
+                  assert page.evaluate('document.body.scrollHeight')<=size[1]+100, 'login must fit one screen'
                   page.locator('#pilot-access').fill('fake-counselor-access-code-987')
                   page.locator('#pilot-verify').click()
                   expect(page.locator('#pilot-management')).to_be_visible(timeout=12000)
@@ -95,6 +100,9 @@ jobs:
                   page.locator('#ops-family-consent').check()
                   page.locator('#ops-add').click()
                   expect(page.locator('#pilot-subject-select')).to_have_value('person_mock001')
+                  expect(page.locator('#ops-profile-details')).to_be_visible()
+                  expect(page.locator('#ops-profile-panel')).to_be_hidden()
+                  page.locator('#ops-profile-details summary').click()
                   expect(page.locator('#ops-profile-panel')).to_be_visible()
                   page.locator('#ops-edit-name').fill('변경된 이름')
                   page.locator('#ops-followup-days').select_option('7')
@@ -109,6 +117,8 @@ jobs:
                   expect(page.locator('#pilot-saved')).to_be_hidden()
                   expect(page.locator('#auth-button')).to_be_hidden()
                   expect(page.locator('#ops-trial')).to_be_hidden()
+                  page.locator('#ops-profile-details summary').click()
+                  expect(page.locator('#ops-profile-panel')).to_be_hidden()
                   shot=page.screenshot(full_page=True)
                   pic=Image.open(io.BytesIO(shot)).convert('RGB')
                   pic.thumbnail((830,1150))
@@ -117,8 +127,8 @@ jobs:
                   print('RAJ_INFO_IMAGE_'+('DESKTOP' if size[0]>600 else 'MOBILE')+'='+base64.b64encode(buffer.getvalue()).decode(),flush=True)
                   page.locator('[data-ops-tab="tickets"]').click()
                   expect(page.locator('#ops-ticket-history')).to_contain_text('체험 충전')
-                  expect(page.locator('#ops-payhub-status')).to_contain_text('연결되지 않았습니다')
-                  expect(page.locator('#ops-pay-checkout')).to_be_disabled()
+                  expect(page.locator('#ops-payhub-status')).to_be_hidden()
+                  expect(page.locator('#ops-pay-checkout')).to_be_hidden()
                   page.locator('[data-ops-tab="call"]').click()
                   page.locator('#ops-date').fill('2026-11-04T14:00')
                   page.locator('#ops-book').click()

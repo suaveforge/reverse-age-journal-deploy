@@ -10,7 +10,7 @@
   const SESSION_KEY = 'raj.session.v1';
   let session = null;
   let selectedId = '';
-  let currentView = 'family';
+  let currentView = 'operator';
   let recipients = [];
   let operator = false;
   let modalHandler = null;
@@ -276,7 +276,17 @@
       }
       if(session && selectedId)await loadDashboard().catch(()=>{});
     }
-    renderSelect();view(new URLSearchParams(location.search).get('mode')==='counselor'?'operator':currentView);
+    // The counselor workspace is the public entry point until family billing is ready.
+    // Preserve explicit family previews while keeping the everyday URL clean.
+    const entryUrl = new URL(location.href);
+    const requestedMode = entryUrl.searchParams.get('mode');
+    renderSelect();
+    view(requestedMode === 'family' ? 'family' : 'operator');
+    if (requestedMode === 'counselor' || /\/index\.html$/i.test(entryUrl.pathname)) {
+      if (requestedMode === 'counselor') entryUrl.searchParams.delete('mode');
+      entryUrl.pathname = entryUrl.pathname.replace(/\/index\.html$/i, '/');
+      history.replaceState(null, '', entryUrl.pathname + entryUrl.search + entryUrl.hash);
+    }
   }
 
   $('auth-button').addEventListener('click',()=>session?logout():startLogin());

@@ -71,7 +71,7 @@
     setSession(data);
   }
   function startLogin() {
-    if (!appReady) { readyNotice('독립 도메인과 AuthHub 프로젝트 연결 후 로그인할 수 있습니다. 지금은 화면 미리보기입니다.'); return; }
+    if (!appReady) { readyNotice('로그인 연결 준비 중입니다.'); return; }
     location.href = loginUrl();
   }
   async function logout() {
@@ -91,10 +91,10 @@
   function resetDashboard() {
     setText('balance-value','—'); setText('next-call','예약 없음'); setText('diary-count','—');
     $('schedule-list').className='empty-state';
-    $('schedule-list').innerHTML='<span class="empty-icon" aria-hidden="true">◷</span><h4>예정된 통화가 없습니다</h4><p>원하는 날짜와 시간을 등록하면<br>이곳에서 일정을 볼 수 있습니다.</p>';
+    $('schedule-list').textContent='예정된 통화가 없습니다.';
     $('diary-list').className='empty-state';
-    $('diary-list').innerHTML='<span class="empty-icon" aria-hidden="true">≋</span><h4>아직 기록된 이야기가 없습니다</h4><p>통화 후 정리된 이야기를<br>가족과 함께 읽어보세요.</p>';
-    $('packages').innerHTML='<span class="tag-not-ready">이용권 상품 준비 중</span>';
+    $('diary-list').textContent='아직 남겨진 일기가 없습니다.';
+    $('packages').innerHTML='<span class="tag-not-ready">상품 준비 중</span>';
   }
   function renderSelect() {
     const select=$('recipient-select');
@@ -204,7 +204,7 @@
     if(!session || !operator) {
       setText('operator-users','—');setText('operator-upcoming','—');
       $('operator-list').className='empty-state';
-      $('operator-list').innerHTML='<span class="empty-icon">◎</span><h4>상담사 로그인이 필요합니다</h4><p>승인된 상담사 계정으로 로그인하면<br>이용자와 회기 상태를 볼 수 있습니다.</p>';
+      $('operator-list').textContent='상담사 로그인 후 확인할 수 있습니다.';
       return;
     }
     const info=await request('/api/operator/overview');
@@ -215,7 +215,7 @@
       $('operator-list').innerHTML=info.recipients.map(r=>'<div class="entry"><div><strong>'+esc(r.display_name)+'</strong><small>이용자 등록 '+esc((r.created_at||'').slice(0,10))+'</small></div><span class="state">잔여 '+esc(r.balance)+'회</span></div>').join('');
     }else{
       $('operator-list').className='empty-state';
-      $('operator-list').innerHTML='<span class="empty-icon">◎</span><h4>등록된 이용자가 없습니다</h4><p>가족이 등록되면 이곳에서 확인할 수 있습니다.</p>';
+      $('operator-list').textContent='등록된 이용자가 없습니다.';
     }
   }
 
@@ -224,13 +224,13 @@
     document.querySelectorAll('[data-view]').forEach(b=>{const active=b.dataset.view===name;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     $('family-view').hidden=name!=='family';
     $('operator-view').hidden=name!=='operator';
-    $('workspace-title').textContent=name==='family'?'가족의 기록':'운영 관리';
+    $('workspace-title').textContent=name==='family'?'우리 가족의 기록':'상담사 관리';
     $('recipient-select').disabled=name!=='family';
     $('recipient-label').hidden=name!=='family';
     if(name==='operator')renderOperator().catch(e=>readyNotice(String(e.message||e)));
   }
   async function init() {
-    if (!appReady) readyNotice('서비스 화면 미리보기입니다. 독립 도메인·AuthHub 프로젝트·API 연결 후 회원가입과 저장 기능이 활성화됩니다.');
+    if (!appReady) readyNotice('로그인·결제 연결 준비 중입니다.');
     session=readSession();
     try{await loginCallback();}catch(e){readyNotice(String(e.message||e));}
     if(session && appReady){

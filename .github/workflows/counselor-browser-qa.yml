@@ -1,0 +1,67 @@
+name: Counselor live site browser journey (no billed calls)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/counselor-browser-qa.yml
+      - pilot.js
+      - index.html
+      - styles.css
+      - app.js
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Chrome test of HTTPS API, counselor UI, auth rejection and Retell SDK import
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright
+          cat >/tmp/raj_counselor.py <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          ROOT='https://reverse-age-journal.suaveforge.com:18461/'
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+              for mode,width,height in [('desktop',1365,900),('mobile',390,844)]:
+                  page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
+                  errors=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  res=page.goto(ROOT+'?mode=counselor',wait_until='networkidle',timeout=45000)
+                  assert res.status==200
+                  assert page.locator('#counselor-pilot').is_visible()
+                  assert page.locator('#pilot-login').is_visible()
+                  assert page.locator('#pilot-start').is_hidden()
+                  assert page.locator('#pilot-save').is_hidden()
+                  assert page.locator('#workspace').is_hidden()
+                  assert page.evaluate('document.documentElement.scrollWidth')==width
+                  api=page.evaluate('''async () => {
+                    const r=await fetch('/api/pilot/healthz');
+                    return {status:r.status,body:await r.json()}
+                  }''')
+                  assert api['status']==200 and api['body']['mode']=='evidence-retell-bridge',api
+                  page.locator('#pilot-access').fill('wrong-operator-code-123')
+                  page.locator('#pilot-verify').click()
+                  page.wait_for_function('document.querySelector("#pilot-status").textContent.includes("접근 코드가 맞지")',timeout=12000)
+                  assert page.locator('#pilot-call-panel').is_hidden()
+                  assert not errors,errors
+                  print('COUNSELOR_UI_'+mode.upper()+'=PASS',flush=True)
+                  page.screenshot(path='/tmp/counselor-'+mode+'.png',full_page=True)
+                  if mode=='desktop':
+                      result=page.evaluate('''async () => {
+                        try{
+                          const module=await import('https://esm.sh/retell-client-js-sdk@2.0.8');
+                          return {ok:typeof module.RetellWebClient==='function'};
+                        }catch(e){return {ok:false,error:String(e)}}
+                      }''')
+                      print('RETELL_SDK_IMPORT='+json.dumps(result),flush=True)
+                      assert result['ok'],result
+                  page.close()
+              browser.close()
+          print('COUNSELOR_REAL_BROWSER_QA=PASS')
+          PY
+          python3 /tmp/raj_counselor.py

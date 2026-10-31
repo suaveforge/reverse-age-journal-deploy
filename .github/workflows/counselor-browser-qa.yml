@@ -24,23 +24,27 @@ jobs:
           cat >/tmp/raj_counselor.py <<'PY'
           import json
           from playwright.sync_api import sync_playwright, expect
-          ROOT='https://reverse-age-journal.suaveforge.com:18461/'
+          ROOT='https://reverse-age-journal.suaveforge.com/'
           with sync_playwright() as p:
               browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
               for mode,width,height in [('desktop',1365,900),('mobile',390,844)]:
                   page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
                   errors=[]
                   page.on('pageerror',lambda e:errors.append(str(e)))
-                  res=page.goto(ROOT+'?mode=counselor',wait_until='networkidle',timeout=45000)
+                  res=page.goto(ROOT,wait_until='networkidle',timeout=45000)
                   assert res.status==200
+                  assert page.url.split('?')[0]==ROOT
                   assert page.locator('#counselor-pilot').is_visible()
                   assert page.locator('#pilot-login').is_visible()
                   assert page.locator('#pilot-start').is_hidden()
                   assert page.locator('#pilot-save').is_hidden()
                   assert page.locator('#workspace').is_hidden()
+                  assert page.locator('.header-actions').is_hidden()
+                  assert page.locator('.hero').is_hidden()
+                  assert page.evaluate('document.body.scrollHeight')<=height+100, 'landing causes unnecessary scroll'
                   assert page.evaluate('document.documentElement.scrollWidth')==width
                   api=page.evaluate('''async () => {
-                    const r=await fetch('/api/pilot/healthz');
+                    const r=await fetch(window.RAJ_CONFIG.pilotApiBase+'/api/pilot/healthz');
                     return {status:r.status,body:await r.json()}
                   }''')
                   assert api['status']==200 and api['body']['mode']=='evidence-retell-bridge',api

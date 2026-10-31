@@ -2,11 +2,13 @@
 
 Public, static, credential-free frontend for the independent Reverse Age Journal pilot.
 
-## Preview
+## Public hosting
 
-GitHub Pages is enabled and built. Spaceship CNAME is set for `reverse-age-journal.suaveforge.com`; HTTP 200 was verified on 2026-10-31. HTTPS certificate issuance is still pending verification. Until HTTPS is available, use this only as a read-only preview; do not enter personal information.
+Primary HTTPS site: **https://reverse-age-journal.suaveforge.com/**
 
-No customer data or simulated payment success is embedded in the site. Before backend configuration, the page is a **read-only preview**.
+The static web assets are served by the existing server123 Caddy using a dedicated Let's Encrypt certificate. Spaceship `A` record points the domain to `211.255.25.123`. Public HTTPS and HTTP-to-HTTPS redirect have been independently verified.
+
+The private `suaveforge/reverse-age-journal` repository is the authoritative source; its `web/` changes are deployed automatically to server123. This public repository is a source-controlled static asset mirror.
 
 ## Configure
 

@@ -100,12 +100,14 @@
     try{
       const data=await request('/subjects',{method:'POST',body:JSON.stringify({
         name,phone:phone||null,family_phone:family||null,participant_consent:true,
-        family_notifications_consent:$('ops-family-consent').checked
+        family_notifications_consent:$('ops-family-consent').checked,
+        recurring_consent:$('ops-recurring-consent').checked
       })});
       selected=data.id;
       for(const id of ['ops-name','ops-phone','ops-family-phone'])$(id).value='';
       $('ops-consent').checked=false;
       $('ops-family-consent').checked=false;
+      $('ops-recurring-consent').checked=false;
       await loadSubjects();
       feedback('어르신이 등록됐습니다. 체험 회기를 충전하세요.');
     }finally{loading=false;$('ops-add').disabled=false;}

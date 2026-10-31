@@ -9,9 +9,15 @@
   let activeTab='info';
   let creating=false;
   let authorized=false;
+  let hasOutbox=false;
+  let noticeTimer=null;
   const ticketLabels={TRIAL:'체험 충전',PURCHASE:'구매',COMPLETED_CALL:'통화 사용'};
   function switchTab(tab){
+    if(!subjects.length && tab!=='info')tab='info';
     activeTab=tab;
+    document.querySelector('.ops-tabs').hidden=!subjects.length;
+    $('ops-outbox-panel').hidden=tab!=='record'||!hasOutbox;
+    if($('pilot-status').dataset.kind==='ok')$('pilot-status').textContent='';
     for(const button of document.querySelectorAll('[data-ops-tab]')){
       const yes=button.dataset.opsTab===tab;
       button.classList.toggle('active',yes);
@@ -32,7 +38,8 @@
     }
     $('pilot-saved').hidden=!authorized||tab!=='record';
     $('pilot-saved').classList.toggle('ops-away',tab!=='record');
-    $('ops-new-person').hidden=tab!=='info';
+    $('ops-new-person').hidden=tab!=='info'||!subjects.length;
+    $('ops-outbox-panel').hidden=tab!=='record'||!hasOutbox;
   }
   function renderCreditHistory(data){
     const target=$('ops-ticket-history');
@@ -95,6 +102,8 @@
   const request=(path,options)=>window.RAJ_OPERATIONS_REQUEST(path,options);
   function feedback(message,bad=false){
     const el=$('pilot-status');el.textContent=message;el.dataset.kind=bad?'error':'ok';
+    clearTimeout(noticeTimer);
+    if(message)noticeTimer=setTimeout(()=>{if(el.textContent===message)el.textContent='';},bad?6500:3500);
   }
   async function safe(promise){
     try{return await (typeof promise==='function'?promise():promise)}catch(e){
@@ -249,7 +258,9 @@
   async function outbox(){
     const data=await request('/outbox');
     const el=$('ops-outbox');el.replaceChildren();
-    if(!data.messages?.length){el.textContent='대기 중인 안내가 없습니다.';return;}
+    hasOutbox=Boolean(data.messages?.length);
+    $('ops-outbox-panel').hidden=activeTab!=='record'||!hasOutbox;
+    if(!hasOutbox){return;}
     for(const msg of data.messages.slice(0,25)){
       const card=document.createElement('div');card.className='ops-message';
       const title=document.createElement('strong');

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script defer src="./config.js"></script>
   <script defer src="./app.js"></script>
+  <script defer src="./pilot.js"></script>
 </head>
 <body>
   <div class="page">
@@ -41,6 +42,70 @@
             <span class="button-arrow" aria-hidden="true">↗</span>
           </button>
         </div>
+      </section>
+
+
+
+      <section id="counselor-pilot" class="pilot-section" hidden aria-labelledby="pilot-section-title">
+        <div class="pilot-section-head">
+          <h2 id="pilot-section-title">AI 통화 체험</h2>
+          <p>기존 낌새 Evidence 연결 · 통화 → 일기</p>
+        </div>
+        <div id="pilot-login" class="pilot-login">
+          <label for="pilot-access">Evidence 운영자 접근 코드</label>
+          <div class="pilot-access-row">
+            <input id="pilot-access" type="password" autocomplete="off" placeholder="접근 코드 입력" maxlength="512">
+            <button type="button" id="pilot-verify" class="big-button primary">연결하기</button>
+          </div>
+        </div>
+        <div id="pilot-call-panel" hidden>
+          <label class="pilot-checkline">
+            <input id="pilot-consent" type="checkbox">
+            <span>참여자로부터 AI 대화·녹음·Evidence 48시간 보관 동의를 받았습니다.</span>
+          </label>
+          <div class="pilot-call-actions">
+            <button id="pilot-start" class="big-button primary" type="button">AI 통화 시작 <span aria-hidden="true">↗</span></button>
+            <button id="pilot-stop" class="big-button danger" type="button" disabled>통화 종료</button>
+          </div>
+          <p class="pilot-warning">실제 Retell 웹통화입니다. 통화 비용이 발생할 수 있습니다.</p>
+          <p id="pilot-call-id" class="pilot-id"></p>
+        </div>
+        <div id="pilot-status" class="pilot-status" aria-live="polite">운영자 접근 코드를 입력해 주세요.</div>
+        <section id="pilot-results" class="pilot-results" hidden>
+          <div class="pilot-heading">
+            <h3>대화 기록</h3>
+            <div class="pilot-mini-stats"><span id="pilot-event">수집 중</span><span id="pilot-transcript-count">0개 발화</span><span id="pilot-voice">녹음 대기</span></div>
+          </div>
+          <div id="pilot-transcript" class="pilot-transcript"><p class="pilot-empty">대화 전문 수신 대기 중</p></div>
+          <div class="pilot-secondary-actions">
+            <button id="pilot-check" type="button">결과 확인</button>
+            <button id="pilot-sync" type="button">다시 수집</button>
+            <button id="pilot-audio-button" type="button">녹음 듣기</button>
+          </div>
+          <audio id="pilot-audio" controls preload="none" hidden></audio>
+          <button id="pilot-draft" type="button" class="big-button primary pilot-draft-button">일기 만들기 <span aria-hidden="true">↗</span></button>
+        </section>
+        <section id="pilot-draft-panel" class="pilot-draft-panel" hidden>
+          <h3>일기 검토</h3>
+          <p id="pilot-draft-source" class="pilot-draft-source"></p>
+          <label for="pilot-title">일기 제목</label>
+          <input type="text" id="pilot-title" maxlength="120">
+          <label for="pilot-body">일기 내용</label>
+          <textarea id="pilot-body" rows="9" maxlength="20000"></textarea>
+          <label class="pilot-checkline">
+            <input id="pilot-save-consent" type="checkbox">
+            <span>수정한 일기를 이 서비스에 14일간 저장하는 데 동의받았습니다.</span>
+          </label>
+          <button id="pilot-save" class="big-button primary" type="button">일기 저장하기 <span aria-hidden="true">↗</span></button>
+        </section>
+        <section id="pilot-saved" class="pilot-saved">
+          <div class="pilot-heading">
+            <h3>저장한 일기</h3>
+            <button id="pilot-refresh-diaries" type="button" class="pilot-text-action">새로고침</button>
+          </div>
+          <div id="pilot-diaries" class="pilot-diaries">연결 후 확인할 수 있습니다.</div>
+          <button id="pilot-delete" type="button" class="pilot-delete-button">현재 통화 자료 삭제</button>
+        </section>
       </section>
 
       <section class="workspace" id="workspace" aria-labelledby="workspace-title">

@@ -10,7 +10,7 @@
   const SESSION_KEY = 'raj.session.v1';
   let session = null;
   let selectedId = '';
-  let currentView = 'operator';
+  let currentView = 'family';
   let recipients = [];
   let operator = false;
   let modalHandler = null;
@@ -220,15 +220,18 @@
   }
 
   function view(name) {
-    // Unconfigured commercial family features cannot be offered in the pilot.
-    name='operator';
+    // Demo family journey is independent of the unconfigured commercial backend.
+    name=name==='operator'?'operator':'family';
     currentView=name;
     document.querySelectorAll('[data-view]').forEach(b=>{const active=b.dataset.view===name;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     $('family-view').hidden=name!=='family';
     $('operator-view').hidden=name!=='operator';
     $('workspace-title').textContent=name==='family'?'우리 가족의 기록':'상담사 관리';
     $('counselor-pilot').hidden = name!=='operator';
+    $('family-journey').hidden = name!=='family';
+    $('admin-entry').textContent=name==='operator'?'가족 화면':'관리자 접속';
     document.querySelector('.page').classList.toggle('counselor-mode',name==='operator');
+    document.querySelector('.page').classList.toggle('family-mode',name==='family');
     $('workspace').hidden = !session;
     document.querySelector('.page').classList.toggle('logged-in', Boolean(session));
     if(name==='operator') {
@@ -283,7 +286,7 @@
     const entryUrl = new URL(location.href);
     const requestedMode = entryUrl.searchParams.get('mode');
     renderSelect();
-    view('operator');
+    view('family');
     // Strip link-tracking noise, including ChatGPT utm_source, from the address bar.
     let shouldNormalize = requestedMode === 'counselor' || /\/index\.html$/i.test(entryUrl.pathname);
     for (const key of [...entryUrl.searchParams.keys()]) {
@@ -299,6 +302,7 @@
     }
   }
 
+  $('admin-entry').addEventListener('click',()=>view(currentView==='family'?'operator':'family'));
   $('auth-button').addEventListener('click',()=>session?logout():startLogin());
   $('start-button').addEventListener('click',()=>currentView==='operator' ? $('counselor-pilot').scrollIntoView({behavior:'smooth',block:'start'}) : addFamily());
   $('reserve-button').addEventListener('click',addReservation);

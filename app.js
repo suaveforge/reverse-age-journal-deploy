@@ -229,7 +229,7 @@
     $('workspace-title').textContent=name==='family'?'우리 가족의 기록':'상담사 관리';
     $('counselor-pilot').hidden = name!=='operator';
     $('family-journey').hidden = name!=='family';
-    $('admin-entry').textContent=name==='operator'?'가족 화면':'관리자 접속';
+    $('admin-entry').textContent=name==='operator'?'가족 화면':'관리자 접속하기';
     document.querySelector('.page').classList.toggle('counselor-mode',name==='operator');
     document.querySelector('.page').classList.toggle('family-mode',name==='family');
     $('workspace').hidden = !session;

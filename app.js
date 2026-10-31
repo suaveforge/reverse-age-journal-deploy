@@ -282,7 +282,15 @@
     const requestedMode = entryUrl.searchParams.get('mode');
     renderSelect();
     view(requestedMode === 'family' ? 'family' : 'operator');
-    if (requestedMode === 'counselor' || /\/index\.html$/i.test(entryUrl.pathname)) {
+    // Strip link-tracking noise, including ChatGPT utm_source, from the address bar.
+    let shouldNormalize = requestedMode === 'counselor' || /\/index\.html$/i.test(entryUrl.pathname);
+    for (const key of [...entryUrl.searchParams.keys()]) {
+      if (/^utm_/i.test(key)) {
+        entryUrl.searchParams.delete(key);
+        shouldNormalize = true;
+      }
+    }
+    if (shouldNormalize) {
       if (requestedMode === 'counselor') entryUrl.searchParams.delete('mode');
       entryUrl.pathname = entryUrl.pathname.replace(/\/index\.html$/i, '/');
       history.replaceState(null, '', entryUrl.pathname + entryUrl.search + entryUrl.hash);

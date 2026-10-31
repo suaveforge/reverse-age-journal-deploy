@@ -23,12 +23,14 @@
     }
     $('ops-create-panel').hidden=tab!=='info'||!(creating||!subjects.length);
     $('ops-profile-panel').hidden=tab!=='info'||!selected;
+    $('ops-profile-details').hidden=tab!=='info'||!selected;
     $('ops-subject-panel').hidden=tab!=='info';
     $('ops-call-context').hidden=tab!=='call';
     $('pilot-call-panel').hidden=!authorized||tab!=='call';
     for(const id of ['pilot-results','pilot-draft-panel']){
       $(id).classList.toggle('ops-away',tab!=='call');
     }
+    $('pilot-saved').hidden=!authorized||tab!=='record';
     $('pilot-saved').classList.toggle('ops-away',tab!=='record');
     $('ops-new-person').hidden=tab!=='info';
   }
@@ -275,6 +277,8 @@
       'PayHub 연결됨. 상품 금액을 확인한 뒤 결제 링크를 생성할 수 있습니다.':
       'PayHub 운영 프로젝트가 아직 연결되지 않았습니다. 결제 링크는 비활성화되어 있습니다.';
     $('ops-pay-checkout').disabled=!billingReady;
+    $('ops-payhub-status').hidden=!billingReady;
+    document.querySelectorAll('[data-payhub-action]').forEach(el=>{el.hidden=!billingReady;});
     const item=(data.packages||[]).find(x=>x.package_code===$('ops-pay-package').value);
     $('ops-pay-price').value=item?String(item.price_krw):'';
     $('ops-pay-active').value=item&&item.active?'true':'false';

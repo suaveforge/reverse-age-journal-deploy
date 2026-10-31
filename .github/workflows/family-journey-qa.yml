@@ -38,7 +38,7 @@ jobs:
                   page.goto('http://127.0.0.1:18765/',wait_until='networkidle',timeout=40000)
                   expect(page.locator('#family-journey')).to_be_visible()
                   expect(page.locator('#counselor-pilot')).to_be_hidden()
-                  expect(page.locator('#admin-entry')).to_have_text('관리자 접속')
+                  expect(page.locator('#admin-entry')).to_have_text('관리자 접속하기')
                   expect(page.locator('.header-actions')).to_be_hidden()
                   expect(page.locator('#auth-button')).to_be_hidden()
                   assert page.evaluate('document.documentElement.scrollWidth')==width,'horizontal overflow landing'
@@ -66,6 +66,7 @@ jobs:
                   page.locator('#family-reserve').click()
                   expect(page.locator('.family-confirm')).to_contain_text('김어르신')
                   expect(page.locator('.family-confirm')).to_contain_text('5회')
+                  expect(page.locator('.family-important')).to_contain_text('실제 예약이나 전화 발신은 진행되지 않았습니다')
                   expect(page.locator('#family-record')).to_be_visible()
                   page.reload(wait_until='networkidle')
                   expect(page.locator('#family-record')).to_be_visible()

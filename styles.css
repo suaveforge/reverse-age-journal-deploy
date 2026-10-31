@@ -332,3 +332,85 @@ dialog::backdrop { background: #10271fb5; }
 /* Avoid showing saved diaries, past call results or auth-only actions on My Info. */
 .ops-away{display:none!important;}
 .page.counselor-mode #auth-button{display:none!important;}
+
+
+/* Counselor-only production surface. No placeholder family/auth/billing entry points. */
+.page .header-actions,.page .hero,.page #workspace,.page #modal{display:none!important}
+.page .site-header{padding:18px clamp(18px,4vw,48px);min-height:76px;border-bottom:0}
+.page .wordmark strong{font-size:clamp(30px,3.4vw,40px);line-height:1.25}
+.page .wordmark span{display:none!important}
+.page .main{padding:0 clamp(18px,4vw,48px) 36px}
+.page .pilot-section{max-width:1080px;margin:auto;padding:14px 0 32px;border:0}
+.page .pilot-section-head{margin:0 0 20px}
+.page .pilot-section-head h2{font-size:clamp(32px,4vw,45px)}
+.page .pilot-login{max-width:800px;margin:0 auto;padding:clamp(22px,4vw,42px);border:2px solid var(--line)}
+.page .pilot-login>label{font-size:clamp(24px,2.7vw,30px);margin-bottom:18px}
+.page .pilot-access-row{grid-template-columns:minmax(0,1fr) 220px}
+.page #pilot-access{min-height:78px;font-size:clamp(23px,2.6vw,29px);font-weight:750}
+.page #pilot-verify{min-height:78px;font-size:clamp(23px,2.6vw,28px)}
+.page .pilot-status{font-size:clamp(21px,2.3vw,25px);font-weight:800;margin-top:14px;padding:16px 22px}
+.page .pilot-status:empty{display:none}
+.page .pilot-management{padding:0}
+.page .ops-section-top{margin:0 0 18px}
+.page .ops-section-top h3{margin:0;font-size:clamp(34px,4.2vw,49px)}
+.page .ops-large-outline{min-height:66px;font-size:clamp(21px,2.5vw,27px);padding:12px 19px;font-weight:800}
+.page .ops-tabs{gap:10px;margin-bottom:18px}
+.page .ops-tabs button{min-height:78px;font-size:clamp(21px,2.6vw,27px);padding:8px;border-radius:15px}
+.page .pilot-management-card{margin:12px 0;padding:clamp(18px,2.8vw,29px)}
+.page .pilot-big-label,.page .pilot-form-grid label,
+.page .ops-profile-grid label,.page .ops-rule-grid label,
+.page .pilot-draft-panel>label:not(.pilot-checkline){font-size:clamp(21px,2.4vw,25px);font-weight:800}
+.page .pilot-management-card input:not([type=checkbox]),
+.page .pilot-management-card select,.page .pilot-management-card textarea{font-size:clamp(21px,2.5vw,26px);min-height:70px;margin-top:10px}
+.page .ops-main-card #pilot-subject-select{font-size:clamp(24px,2.8vw,31px)}
+.page .ops-credit-row{padding:12px 0 0}
+.page .ops-main-card #ops-credit{font-size:clamp(29px,3.5vw,40px)}
+.page .ops-main-card .ops-credit-row .pilot-text-action{font-size:clamp(20px,2.4vw,24px);min-height:64px;padding:9px 16px}
+.page .ops-profile-details{margin-top:12px}
+.page .ops-profile-details[hidden]{display:none}
+.page .ops-profile-details summary{list-style:none;min-height:70px;padding:16px 25px;border:2px solid #bfd3c2;border-radius:15px;background:white;color:var(--green);font-size:clamp(22px,2.7vw,29px);font-weight:800;cursor:pointer}
+.page .ops-profile-details summary::-webkit-details-marker{display:none}
+.page .ops-profile-details summary::after{content:'＋';float:right;font-weight:850}
+.page .ops-profile-details[open] summary::after{content:'−'}
+.page .ops-profile-details .ops-profile-card{margin-top:12px}
+.page .ops-consent-grid label,.page .pilot-checkline{font-size:clamp(21px,2.5vw,25px);line-height:1.4;font-weight:800}
+.page .ops-consent-grid input,.page .pilot-checkline input{width:30px;height:30px}
+.page .ops-rule-grid,.page .ops-profile-grid{gap:14px;margin:10px 0 20px}
+.page .ops-full-button{font-size:27px;min-height:78px}
+.page .pilot-management-card h4,.page .pilot-heading h3,.page .pilot-draft-panel h3{font-size:clamp(27px,3vw,34px)}
+.page #ops-script,.page #ops-previous,.page .ops-message p,.page .pilot-diaries,
+.page .pilot-saved-entry p,.page .pilot-turn p,.page .pilot-draft-source,
+.page .pilot-empty{font-size:clamp(21px,2.3vw,24px);line-height:1.55}
+.page .ops-entry,.page .ops-entry strong,.page .ops-entry span,.page .ops-entry-date,
+.page .ops-entry-state,.page .ops-entry small,.page .pilot-saved-entry small,
+.page .pilot-mini-stats span,.page .pilot-id{font-size:clamp(19px,2.2vw,23px)}
+.page .ops-entry{flex-wrap:wrap;justify-content:flex-start;gap:12px}
+.page .pilot-secondary-actions button,.page .pilot-text-action,
+.page .ops-small-button,.page .pilot-saved-actions button,.page .pilot-delete-button{
+font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decoration:none}
+.page .pilot-cost-warning{display:block;font-size:21px;font-weight:750;color:#853a33;line-height:1.5}
+.page .pilot-warning:not(.pilot-cost-warning){display:none}
+.page .pilot-call-actions .big-button,.page .pilot-draft-button,
+.page #pilot-save{font-size:clamp(24px,2.8vw,29px);min-height:78px}
+.page .pilot-results,.page .pilot-draft-panel,.page .pilot-saved{padding:clamp(19px,3vw,30px);margin-top:14px}
+.page .pilot-saved-entry{padding:14px 0}
+.page #pilot-call-id{display:none}
+.page .pilot-draft-panel input,.page .pilot-draft-panel textarea{font-size:24px}
+.page .pilot-saved-actions{flex-wrap:wrap}
+.page .pilot-status[data-kind="ok"]:empty{display:none}
+@media (max-width:720px){
+ .page .site-header{padding:14px 18px;min-height:65px}
+ .page .main{padding:0 16px 28px}
+ .page .pilot-section{padding:12px 0 26px}
+ .page .pilot-login{padding:22px 18px}
+ .page .pilot-access-row,.page .pilot-call-actions{grid-template-columns:1fr}
+ .page .ops-tabs{gap:6px}
+ .page .ops-tabs button{font-size:20px;min-height:70px;padding:8px 2px}
+ .page .ops-section-top{gap:8px}
+ .page .ops-section-top h3{font-size:31px}
+ .page .ops-large-outline{font-size:19px;padding:12px 14px}
+ .page .pilot-management-card{padding:17px}
+ .page .ops-credit-row strong{font-size:30px}
+ .page .ops-profile-grid,.page .ops-rule-grid,.page .ops-consent-grid{grid-template-columns:1fr}
+ .page .pilot-secondary-actions button{flex:1;min-width:120px}
+}

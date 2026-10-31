@@ -226,6 +226,7 @@
     $('operator-view').hidden=name!=='operator';
     $('workspace-title').textContent=name==='family'?'우리 가족의 기록':'상담사 관리';
     $('workspace').hidden = !session;
+    document.querySelector('.page').classList.toggle('logged-in', Boolean(session));
     if(name==='operator') {
       $('hero-title').innerHTML='통화 일정과 기록,<br><span>한곳에서 관리합니다.</span>';
       document.querySelector('.hero-subtitle').textContent='상담사를 위한 관리 공간.';

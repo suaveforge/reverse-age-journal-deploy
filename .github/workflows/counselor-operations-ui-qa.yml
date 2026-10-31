@@ -47,6 +47,9 @@ jobs:
                   status=201
               elif path=='diaries':
                   body={'diaries':[],'retention_days':14}
+              elif path=='billing/packages':
+                  if req.method=='GET': body={'packages':[],'payhub_ready':False}
+                  else: body={'saved':True,'live_checkout_enabled':False}
               elif path=='operations/outbox':
                   body={'messages':[],'delivery_enabled':False}
               elif path=='operations/subjects/person_mock001/monthly-report':
@@ -76,6 +79,8 @@ jobs:
                   page.locator('#ops-recurring-consent').check()
                   page.locator('#ops-family-consent').check()
                   page.locator('#ops-add').click()
+                  expect(page.locator('#ops-payhub-status')).to_contain_text('아직 연결되지 않았습니다')
+                  expect(page.locator('#ops-pay-checkout')).to_be_disabled()
                   expect(page.locator('#pilot-subject-select')).to_have_value('person_mock001')
                   page.locator('#ops-trial').click()
                   expect(page.locator('#ops-credit')).to_contain_text('3회')

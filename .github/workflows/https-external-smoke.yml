@@ -24,3 +24,10 @@ jobs:
             "https://$HOST/"
           grep -q 'Reverse Age Journal' /tmp/raj-page.html
           echo 'PUBLIC_HTTPS_200=PASS'
+          echo 'PUBLIC_HTTP_REDIRECT_CHECK:'
+          curl -sSI --max-time 12 "http://$HOST/" | sed -n '1,10p'
+          HTTP_LOCATION=$(curl -sS -o /dev/null --max-time 12 -w '%{redirect_url}' "http://$HOST/")
+          case "$HTTP_LOCATION" in
+            "https://$HOST/"*) echo 'PUBLIC_HTTP_TO_HTTPS_REDIRECT=PASS' ;;
+            *) echo "HTTP_REDIRECT_UNEXPECTED=$HTTP_LOCATION"; exit 8 ;;
+          esac

@@ -45,6 +45,8 @@ jobs:
                   state['bookings']=[{'id':'appt_mock','due_at':'2026-11-04T05:00:00+00:00','state':'SCHEDULED','attempt_count':0}]
                   body={'appointment_id':'appt_mock','automatic_phone_delivery_enabled':False}
                   status=201
+              elif path=='diaries':
+                  body={'diaries':[],'retention_days':14}
               elif path=='operations/outbox':
                   body={'messages':[],'delivery_enabled':False}
               elif path=='operations/subjects/person_mock001/monthly-report':

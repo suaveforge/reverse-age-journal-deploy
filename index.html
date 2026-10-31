@@ -10,6 +10,8 @@
   <script defer src="./config.js"></script>
   <script defer src="./app.js"></script>
   <script defer src="./pilot.js"></script>
+  <script defer src="./operations.js"></script>
+  <script defer src="./operations.js"></script>
 </head>
 <body>
   <div class="page">
@@ -58,6 +60,52 @@
             <button type="button" id="pilot-verify" class="big-button primary">연결하기</button>
           </div>
         </div>
+        <section id="pilot-management" class="pilot-management" hidden aria-labelledby="pilot-management-title">
+          <h3 id="pilot-management-title">어르신과 회기 관리</h3>
+          <div class="pilot-management-card">
+            <div class="pilot-form-grid">
+              <label>어르신 이름<input id="ops-name" maxlength="60" placeholder="어르신 이름" autocomplete="off"></label>
+              <label>전화번호<input id="ops-phone" type="tel" placeholder="010-0000-0000" autocomplete="off"></label>
+              <label>가족 연락처<input id="ops-family-phone" type="tel" placeholder="010-0000-0000" autocomplete="off"></label>
+            </div>
+            <label class="pilot-checkline"><input id="ops-consent" type="checkbox"><span>어르신의 전화·대화 수집 동의를 확인했습니다.</span></label>
+            <label class="pilot-checkline"><input id="ops-family-consent" type="checkbox"><span>가족 연락처로 통화·이용권 안내를 보내는 데 별도 동의받았습니다.</span></label>
+            <button id="ops-add" class="big-button outline" type="button">어르신 등록 <span aria-hidden="true">+</span></button>
+          </div>
+          <div class="pilot-management-card">
+            <label for="pilot-subject-select" class="pilot-big-label">통화할 어르신</label>
+            <select id="pilot-subject-select"><option value="">어르신을 선택하세요</option></select>
+            <div class="ops-credit-row"><strong id="ops-credit">잔여 회기 —</strong>
+              <button id="ops-trial" type="button" class="pilot-text-action">체험 3회 충전</button></div>
+            <h4 id="ops-stage">첫 통화 안내</h4>
+            <p id="ops-script">어르신을 선택하면 대화 안내가 나타납니다.</p>
+            <p id="ops-previous"></p>
+          </div>
+          <div class="pilot-management-card">
+            <h4>다음 통화 예약</h4>
+            <div class="pilot-access-row">
+              <input type="datetime-local" id="ops-date">
+              <button id="ops-book" type="button" class="big-button primary">예약하기</button>
+            </div>
+            <p class="pilot-warning">대화 완료 후 3일 뒤 일정이 자동 등록됩니다. 일반전화 자동 발신은 통신 연결 후 작동합니다.</p>
+            <div id="ops-appointments"></div>
+          </div>
+          <div class="pilot-management-card">
+            <h4>가족 보고서</h4>
+            <div class="pilot-access-row">
+              <input type="month" id="ops-report-month">
+              <button id="ops-report" type="button" class="big-button outline">보고서 만들기</button>
+            </div>
+            <textarea id="ops-report-output" readonly rows="7" hidden></textarea>
+            <button id="ops-report-copy" type="button" class="pilot-text-action" hidden>보고서 복사</button>
+          </div>
+          <div class="pilot-management-card">
+            <h4>가족 알림</h4>
+            <p class="pilot-warning">전송 업체 연결 전에는 자동 발송하지 않습니다. 안내 내용을 확인하고 복사할 수 있습니다.</p>
+            <div id="ops-outbox" class="ops-outbox"></div>
+            <button id="ops-refresh" type="button" class="pilot-text-action">현황 새로고침</button>
+          </div>
+        </section>
         <div id="pilot-call-panel" hidden>
           <label class="pilot-checkline">
             <input id="pilot-consent" type="checkbox">

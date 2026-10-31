@@ -47,7 +47,7 @@
   }
   function show(node,yes){node.hidden=!yes;}
   function setWorking(working){
-    $("pilot-start").disabled=working||!operatorCode||!$("pilot-consent").checked||active;
+    $("pilot-start").disabled=working||!operatorCode||!$("pilot-consent").checked||!window.RAJ_SELECTED_SUBJECT||!window.RAJ_CREDITS_AVAILABLE||active;
     $("pilot-stop").disabled=!active;
     $("pilot-check").disabled=working||!currentCallId;
     $("pilot-sync").disabled=working||!currentCallId;
@@ -71,7 +71,8 @@
       $("pilot-access").value="";
       show($("pilot-login"),false);
       show($("pilot-call-panel"),true);
-      status("연결됐습니다. 동의 확인 후 통화를 시작할 수 있습니다.","ok");
+      window.dispatchEvent(new Event("raj:pilot-connected"));
+      status("연결됐습니다. 어르신을 등록하거나 선택하고 통화를 시작하세요.","ok");
       setWorking(false);
       await loadDiaries();
       if(currentCallId){
@@ -88,6 +89,8 @@
   }
   async function createCall(){
     if(!operatorCode||active||!$("pilot-consent").checked)return;
+    if(!window.RAJ_SELECTED_SUBJECT){status("통화할 어르신을 먼저 선택해 주세요.","error");return;}
+    if(!window.RAJ_CREDITS_AVAILABLE){status("체험 회기 또는 이용권을 먼저 충전해 주세요.","error");return;}
     if(!window.confirm("동의받은 시험 통화를 시작할까요? 실제 Retell 통화 요금이 발생할 수 있습니다."))return;
     clearDraft();
     currentCallId="";
@@ -98,7 +101,7 @@
     status("통화를 연결하고 있습니다.");
     try{
       // A real, billed Retell call is initiated by KIMSE Evidence API.
-      const data=await api("/calls",{method:"POST",body:JSON.stringify({consent:true})});
+      const data=await api("/calls",{method:"POST",body:JSON.stringify({consent:true,subject_id:window.RAJ_SELECTED_SUBJECT})});
       currentCallId=data.call_id;
       sessionStorage.setItem("raj.evidence.pilot.call",currentCallId);
       $("pilot-call-id").textContent="통화 ID: "+currentCallId;
@@ -174,6 +177,16 @@
     if(!currentCallId||!operatorCode)return false;
     const data=await api("/calls/"+encodeURIComponent(currentCallId));
     const count=renderTranscript(data);
+    if(data.journal_operations){
+      const j=data.journal_operations;
+      status(j.settlement?.status==="needs_payment_no_charge"?"회기가 부족합니다. 이용권을 확인하세요.":"대화와 회기 상태를 확인했습니다.","ok");
+      window.dispatchEvent(new Event("raj:operations-changed"));
+    }
+    if(data.voice_measurements?.responseDelay){
+      const metric=data.voice_measurements.responseDelay;
+      $("pilot-voice").textContent=metric.status==="measured"?
+        "응답 간격 중앙값 "+Math.round(metric.medianLatencyMs/1000*10)/10+"초 (참고)":"응답 간격 측정 자료 부족";
+    }
     return Boolean(count&&(Number(data.event_mask||0)&2));
   }
   async function pollResult(attempt){
@@ -223,7 +236,8 @@
     try{
       await api("/calls/"+encodeURIComponent(currentCallId)+"/diary",
         {method:"PUT",body:JSON.stringify({title,body,consent_to_save:true})});
-      status("일기가 저장됐습니다. 한 회기 시험을 마쳤습니다.","ok");
+      status("일기가 저장됐습니다. 다음 통화 일정을 확인하세요.","ok");
+      window.dispatchEvent(new Event("raj:operations-changed"));
       await loadDiaries();
     }catch(e){status(errorMessage(e),"error");}
     finally{$("pilot-save").disabled=false;}
@@ -284,7 +298,11 @@
     }catch(e){status(errorMessage(e),"error");}
   }
   function bind(id,handler){$(id).addEventListener("click",()=>{Promise.resolve(handler()).catch(e=>status(errorMessage(e),"error"));});}
-  bind("pilot-verify",verify);
+  window.RAJ_OPERATIONS_REQUEST=(path,options)=>api("/operations"+path,options);
+  window.RAJ_SELECTED_SUBJECT="";
+  window.RAJ_CREDITS_AVAILABLE=false;
+  window.RAJ_REFRESH_CALL_BUTTON=()=>setWorking(false);
+    bind("pilot-verify",verify);
   $("pilot-access").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();verify();}});
   $("pilot-consent").addEventListener("change",()=>setWorking(false));
   bind("pilot-start",createCall);

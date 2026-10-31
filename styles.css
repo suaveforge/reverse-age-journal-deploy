@@ -254,3 +254,34 @@ dialog::backdrop { background: #10271fb5; }
 .pilot-secondary-actions button{flex:1;min-width:125px;}
 .pilot-checkline{font-size:16px;}
 }
+.pilot-management{padding:16px 0 35px;}
+.pilot-management>h3{font-size:30px;letter-spacing:-.055em;margin:20px 0;}
+.pilot-management-card{padding:29px;margin:18px 0;border:1px solid var(--line);border-radius:18px;background:white;}
+.pilot-management-card h4{font-size:23px;letter-spacing:-.05em;margin:0 0 20px;color:var(--ink);}
+.pilot-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.pilot-form-grid label{display:block;font-size:16px;font-weight:750;}
+.pilot-management-card input:not([type=checkbox]),.pilot-management-card select,.pilot-management-card textarea{
+ display:block;width:100%;min-height:61px;padding:13px 16px;border:1px solid #b7c6b7;border-radius:11px;background:#fff;color:var(--ink);font-size:17px;margin-top:9px;}
+.pilot-management-card textarea{height:auto;resize:vertical;font-size:16px;line-height:1.7;}
+.pilot-management-card button.big-button{min-height:70px;}
+.pilot-big-label{font-size:19px;font-weight:750;}
+.ops-credit-row{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;padding:22px 0;}
+.ops-credit-row strong{font-size:29px;font-weight:800;color:var(--green);}
+.pilot-management-card #ops-stage{margin:10px 0;font-size:21px;}
+#ops-script,#ops-previous{font-size:18px;line-height:1.8;word-break:keep-all;}
+#ops-previous{color:var(--soft);}
+#ops-appointments{margin-top:18px;}
+.ops-entry{display:flex;gap:15px;align-items:center;justify-content:space-between;padding:15px 0;border-top:1px solid var(--line);}
+.ops-entry-date{font-size:16px;font-weight:650;}
+.ops-entry-state{font-size:14px;color:var(--soft);}
+.ops-small-button{font-size:14px;font-weight:750;border:1px solid #cad9ca;background:#f7faf6;color:var(--green);border-radius:9px;padding:10px 13px;}
+.ops-message{padding:18px 0;border-top:1px solid var(--line);}
+.ops-message strong{font-size:17px;color:var(--ink);}
+.ops-message p{font-size:16px;line-height:1.6;white-space:pre-wrap;}
+@media(max-width:680px){
+.pilot-management-card{padding:23px 19px;}
+.pilot-form-grid,.pilot-management-card .pilot-access-row{grid-template-columns:1fr;}
+.ops-credit-row strong{font-size:25px;}
+.pilot-management-card button.big-button{width:100%;}
+.ops-entry{flex-wrap:wrap;}
+}

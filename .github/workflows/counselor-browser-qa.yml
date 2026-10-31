@@ -34,6 +34,9 @@ jobs:
                   res=page.goto(ROOT,wait_until='networkidle',timeout=45000)
                   assert res.status==200
                   assert page.url.split('?')[0]==ROOT
+                  assert page.locator('#family-journey').is_visible()
+                  assert page.locator('#counselor-pilot').is_hidden()
+                  page.locator('#admin-entry').click()
                   assert page.locator('#counselor-pilot').is_visible()
                   assert page.locator('#pilot-login').is_visible()
                   assert page.locator('#pilot-start').is_hidden()
@@ -41,7 +44,7 @@ jobs:
                   assert page.locator('#workspace').is_hidden()
                   assert page.locator('.header-actions').is_hidden()
                   assert page.locator('.hero').is_hidden()
-                  assert page.evaluate('document.body.scrollHeight')<=height+100, 'landing causes unnecessary scroll'
+                  assert page.locator('#family-journey').is_hidden()
                   assert page.evaluate('document.documentElement.scrollWidth')==width
                   api=page.evaluate('''async () => {
                     const r=await fetch(window.RAJ_CONFIG.pilotApiBase+'/api/pilot/healthz');

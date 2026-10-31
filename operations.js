@@ -6,6 +6,90 @@
   let subjects=[];
   let lastReport='';
   let loading=false;
+  let activeTab='info';
+  let creating=false;
+  let authorized=false;
+  const ticketLabels={TRIAL:'체험 충전',PURCHASE:'구매',COMPLETED_CALL:'통화 사용'};
+  function switchTab(tab){
+    activeTab=tab;
+    for(const button of document.querySelectorAll('[data-ops-tab]')){
+      const yes=button.dataset.opsTab===tab;
+      button.classList.toggle('active',yes);
+      if(yes)button.setAttribute('aria-current','page');
+      else button.removeAttribute('aria-current');
+    }
+    for(const panel of document.querySelectorAll('[data-ops-panel]')){
+      panel.hidden=panel.dataset.opsPanel!==tab;
+    }
+    $('ops-create-panel').hidden=tab!=='info'||!(creating||!subjects.length);
+    $('ops-profile-panel').hidden=tab!=='info'||!selected;
+    $('ops-subject-panel').hidden=tab!=='info';
+    $('ops-call-context').hidden=tab!=='call';
+    $('pilot-call-panel').hidden=!authorized||tab!=='call';
+    for(const id of ['pilot-results','pilot-draft-panel']){
+      $(id).classList.toggle('ops-away',tab!=='call');
+    }
+    $('pilot-saved').classList.toggle('ops-away',tab!=='record');
+    $('ops-new-person').hidden=tab!=='info';
+  }
+  function renderCreditHistory(data){
+    const target=$('ops-ticket-history');
+    target.replaceChildren();
+    if(!data||!data.credit_history||!data.credit_history.length){
+      target.textContent='이용 내역 없음';return;
+    }
+    for(const entry of data.credit_history){
+      const el=document.createElement('div');el.className='ops-entry';
+      const label=document.createElement('strong');
+      label.textContent=ticketLabels[entry.kind]||entry.kind;
+      const amount=document.createElement('strong');
+      amount.textContent=(entry.delta>0?'+':'')+entry.delta+'회';
+      const date=document.createElement('small');
+      date.textContent=String(entry.created_at||'').slice(0,10);
+      el.append(label,amount,date);
+      target.append(el);
+    }
+  }
+  function showProfile(data){
+    if(!data?.subject)return;
+    const person=data.subject;
+    $('ops-edit-name').value=person.name||'';
+    $('ops-edit-phone').value=person.phone||'';
+    $('ops-edit-family').value=person.family_phone||'';
+    $('ops-edit-consent').checked=Boolean(person.participant_consent);
+    $('ops-edit-recurring').checked=Boolean(person.recurring_consent);
+    $('ops-edit-family-consent').checked=Boolean(person.family_notifications_consent);
+    $('ops-followup-days').value=String(person.followup_days||3);
+    $('ops-retry-limit').value=String(person.retry_limit||3);
+    $('ops-preferred-hour').value=String(person.preferred_hour??14);
+    renderCreditHistory(data);
+  }
+  async function saveProfile(){
+    if(!selected){feedback('어르신을 선택해 주세요.',true);return;}
+    const name=$('ops-edit-name').value.trim();
+    if(!name){feedback('이름을 입력해 주세요.',true);return;}
+    const participant=$('ops-edit-consent').checked;
+    const repeat=$('ops-edit-recurring').checked;
+    if(repeat&&!participant){feedback('통화 동의가 필요합니다.',true);return;}
+    if(!repeat&&!confirm('자동 재통화를 끄면 예정된 자동 예약이 취소됩니다. 저장할까요?'))return;
+    $('ops-save-profile').disabled=true;
+    try{
+      await request('/subjects/'+encodeURIComponent(selected),{
+        method:'PATCH',body:JSON.stringify({
+          name,phone:$('ops-edit-phone').value.trim()||null,
+          family_phone:$('ops-edit-family').value.trim()||null,
+          participant_consent:participant,
+          recurring_consent:repeat,
+          family_notifications_consent:$('ops-edit-family-consent').checked,
+          followup_days:Number($('ops-followup-days').value),
+          retry_limit:Number($('ops-retry-limit').value),
+          preferred_hour:Number($('ops-preferred-hour').value)
+        })
+      });
+      await loadSubjects();
+      feedback('내 정보를 저장했습니다.');
+    }finally{$('ops-save-profile').disabled=false;}
+  }
   const request=(path,options)=>window.RAJ_OPERATIONS_REQUEST(path,options);
   function feedback(message,bad=false){
     const el=$('pilot-status');el.textContent=message;el.dataset.kind=bad?'error':'ok';
@@ -45,8 +129,10 @@
       option.value=s.id;option.textContent=s.name;picker.append(option);}
     if(!subjects.some(x=>x.id===selected))selected=subjects[0]?.id||'';
     picker.value=selected;
+    if(!selected)creating=true;
     window.RAJ_SELECTED_SUBJECT=selected;
     await showSubject();
+    switchTab(activeTab);
   }
   async function showSubject(){
     window.RAJ_SELECTED_SUBJECT=selected;
@@ -59,6 +145,7 @@
     $('ops-appointments').replaceChildren();
     if(!selected)return;
     const info=await request('/subjects/'+encodeURIComponent(selected));
+    showProfile(info);
     text('ops-credit','잔여 회기 '+info.balance+'회');
     window.RAJ_CREDITS_AVAILABLE=info.balance>0;
     window.RAJ_REFRESH_CALL_BUTTON?.();
@@ -68,7 +155,7 @@
     text('ops-previous',script.prior_story||'');
     const target=$('ops-appointments');
     const a=(info.appointments||[]);
-    if(!a.length){target.textContent='예정된 통화가 없습니다.';return;}
+    if(!a.length){target.textContent='예약 없음';return;}
     for(const item of a.slice(0,8)){
       const entry=addEntry(target,[
         {text:formatTime(item.due_at),cls:'ops-entry-date'},
@@ -108,8 +195,10 @@
       $('ops-consent').checked=false;
       $('ops-family-consent').checked=false;
       $('ops-recurring-consent').checked=false;
+      creating=false;
       await loadSubjects();
-      feedback('어르신이 등록됐습니다. 체험 회기를 충전하세요.');
+      switchTab('info');
+      feedback('등록했습니다. 이용권을 확인하세요.');
     }finally{loading=false;$('ops-add').disabled=false;}
   }
   async function trial(){
@@ -212,13 +301,25 @@
     feedback('PayHub 결제 링크를 생성했습니다. 승인된 결제 완료 후 회기가 충전됩니다.');
   }
   async function connected(){
+    authorized=true;
     $('pilot-management').hidden=false;
+    document.querySelector('.pilot-section-head').hidden=true;
     $('ops-report-month').value=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}).slice(0,7);
     await safe(reload);
     await safe(loadBilling);
+    switchTab('info');
   }
   function bind(id,handler){$(id).addEventListener('click',()=>safe(handler));}
   bind('ops-add',addSubject);
+  bind('ops-save-profile',saveProfile);
+  bind('ops-new-person',()=>{
+    creating=!creating;
+    $('ops-new-person').textContent=creating?'닫기':'+ 어르신 추가';
+    switchTab('info');
+  });
+  document.querySelectorAll('[data-ops-tab]').forEach(button=>{
+    button.addEventListener('click',()=>switchTab(button.dataset.opsTab));
+  });
   bind('ops-pay-save',savePackage);
   bind('ops-pay-checkout',createCheckout);
   bind('ops-pay-copy',async()=>{
@@ -237,7 +338,7 @@
   });
   $('pilot-subject-select').addEventListener('change',e=>{
     selected=e.target.value;
-    safe(showSubject);
+    safe(async()=>{await showSubject();switchTab(activeTab);});
   });
   window.addEventListener('raj:pilot-connected',connected);
   window.addEventListener('raj:operations-changed',()=>safe(reload));

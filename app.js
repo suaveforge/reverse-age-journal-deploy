@@ -226,6 +226,7 @@
     $('operator-view').hidden=name!=='operator';
     $('workspace-title').textContent=name==='family'?'우리 가족의 기록':'상담사 관리';
     $('counselor-pilot').hidden = name!=='operator';
+    document.querySelector('.page').classList.toggle('counselor-mode',name==='operator');
     $('workspace').hidden = !session;
     document.querySelector('.page').classList.toggle('logged-in', Boolean(session));
     if(name==='operator') {

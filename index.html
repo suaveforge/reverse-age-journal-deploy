@@ -60,8 +60,17 @@
           </div>
         </div>
         <section id="pilot-management" class="pilot-management" hidden aria-labelledby="pilot-management-title">
-          <h3 id="pilot-management-title">어르신과 회기 관리</h3>
-          <div class="pilot-management-card">
+          <div class="ops-section-top">
+            <h3 id="pilot-management-title">내 정보</h3>
+            <button type="button" id="ops-new-person" class="ops-large-outline">+ 어르신 추가</button>
+          </div>
+          <nav class="ops-tabs" aria-label="관리 메뉴">
+            <button type="button" data-ops-tab="info" class="active" aria-current="page">내 정보</button>
+            <button type="button" data-ops-tab="call">통화</button>
+            <button type="button" data-ops-tab="tickets">이용권</button>
+            <button type="button" data-ops-tab="record">기록</button>
+          </nav>
+          <div class="pilot-management-card" id="ops-create-panel" data-ops-panel="info" hidden>
             <div class="pilot-form-grid">
               <label>어르신 이름<input id="ops-name" maxlength="60" placeholder="어르신 이름" autocomplete="off"></label>
               <label>전화번호<input id="ops-phone" type="tel" placeholder="010-0000-0000" autocomplete="off"></label>
@@ -72,26 +81,60 @@
             <label class="pilot-checkline"><input id="ops-recurring-consent" type="checkbox"><span>어르신이 3일 간격 재통화 및 예약 시간 전화에 동의했습니다.</span></label>
             <button id="ops-add" class="big-button outline" type="button">어르신 등록 <span aria-hidden="true">+</span></button>
           </div>
-          <div class="pilot-management-card">
+          <div class="pilot-management-card ops-main-card" id="ops-subject-panel" data-ops-panel="info">
             <label for="pilot-subject-select" class="pilot-big-label">통화할 어르신</label>
             <select id="pilot-subject-select"><option value="">어르신을 선택하세요</option></select>
             <div class="ops-credit-row"><strong id="ops-credit">잔여 회기 —</strong>
               <button id="ops-trial" type="button" class="pilot-text-action">체험 3회 충전</button></div>
-            <h4 id="ops-stage">첫 통화 안내</h4>
-            <p id="ops-script">어르신을 선택하면 대화 안내가 나타납니다.</p>
-            <p id="ops-previous"></p>
           </div>
-          <div class="pilot-management-card">
-            <h4>다음 통화 예약</h4>
+          <div class="pilot-management-card ops-profile-card" id="ops-profile-panel" data-ops-panel="info" hidden>
+            <div class="ops-profile-grid">
+              <label>이름<input id="ops-edit-name" autocomplete="off" maxlength="60"></label>
+              <label>전화번호<input id="ops-edit-phone" type="tel" autocomplete="off"></label>
+              <label>가족 연락처<input id="ops-edit-family" type="tel" autocomplete="off"></label>
+            </div>
+            <div class="ops-rule-grid">
+              <label>통화 간격<select id="ops-followup-days">
+                <option value="1">1일</option><option value="2">2일</option><option value="3">3일</option>
+                <option value="5">5일</option><option value="7">7일</option><option value="14">14일</option>
+              </select></label>
+              <label>재시도<select id="ops-retry-limit">
+                <option value="1">1회</option><option value="2">2회</option><option value="3">3회</option>
+              </select></label>
+              <label>통화 시간<select id="ops-preferred-hour">
+                <option value="9">오전 9시</option><option value="10">오전 10시</option>
+                <option value="11">오전 11시</option><option value="12">오후 12시</option>
+                <option value="13">오후 1시</option><option value="14">오후 2시</option>
+                <option value="15">오후 3시</option><option value="16">오후 4시</option>
+                <option value="17">오후 5시</option><option value="18">오후 6시</option>
+                <option value="19">오후 7시</option>
+              </select></label>
+            </div>
+            <div class="ops-consent-grid">
+              <label><input id="ops-edit-consent" type="checkbox"> 통화 동의</label>
+              <label><input id="ops-edit-recurring" type="checkbox"> 자동 재통화</label>
+              <label><input id="ops-edit-family-consent" type="checkbox"> 가족 알림</label>
+            </div>
+            <button id="ops-save-profile" type="button" class="big-button primary ops-full-button">
+              <span>저장</span><span aria-hidden="true">✓</span>
+            </button>
+          </div>
+          <div class="pilot-management-card" data-ops-panel="call">
+            <div id="ops-call-context" hidden>
+              <h4 id="ops-stage">첫 통화</h4>
+              <p id="ops-script"></p><p id="ops-previous"></p>
+            </div>
+            <h4>다음 통화</h4>
             <div class="pilot-access-row">
               <input type="datetime-local" id="ops-date">
               <button id="ops-book" type="button" class="big-button primary">예약하기</button>
             </div>
-            <p class="pilot-warning">대화 완료 후 3일 뒤 일정이 자동 등록됩니다. 일반전화 자동 발신은 통신 연결 후 작동합니다.</p>
+            <p class="pilot-warning">전화 자동 발신은 통신 연결 후 작동합니다.</p>
             <div id="ops-appointments"></div>
           </div>
-          <div class="pilot-management-card">
-            <h4>이용권 결제 관리</h4>
+          <div class="pilot-management-card" data-ops-panel="tickets">
+            <h4>이용권</h4>
+            <div id="ops-ticket-history" class="ops-ticket-history"></div>
             <p id="ops-payhub-status" class="pilot-warning">PayHub 상태를 확인하고 있습니다.</p>
             <div class="pilot-form-grid">
               <label>이용권 종류<select id="ops-pay-package"><option value="FIVE">5회권</option><option value="TEN">10회권</option></select></label>
@@ -105,7 +148,7 @@
             <textarea id="ops-pay-link" rows="2" readonly hidden aria-label="결제 링크"></textarea>
             <button id="ops-pay-copy" type="button" class="pilot-text-action" hidden>결제 링크 복사</button>
           </div>
-          <div class="pilot-management-card">
+          <div class="pilot-management-card" data-ops-panel="record">
             <h4>가족 보고서</h4>
             <div class="pilot-access-row">
               <input type="month" id="ops-report-month">
@@ -114,9 +157,9 @@
             <textarea id="ops-report-output" readonly rows="7" hidden></textarea>
             <button id="ops-report-copy" type="button" class="pilot-text-action" hidden>보고서 복사</button>
           </div>
-          <div class="pilot-management-card">
+          <div class="pilot-management-card" data-ops-panel="record">
             <h4>가족 알림</h4>
-            <p class="pilot-warning">전송 업체 연결 전에는 자동 발송하지 않습니다. 안내 내용을 확인하고 복사할 수 있습니다.</p>
+            <p class="pilot-warning">문자 전송은 준비 중입니다.</p>
             <div id="ops-outbox" class="ops-outbox"></div>
             <button id="ops-refresh" type="button" class="pilot-text-action">현황 새로고침</button>
           </div>

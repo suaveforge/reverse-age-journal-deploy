@@ -13,10 +13,15 @@
   let active=false;
   let audioObjectUrl="";
   let polling=0;
+  let noticeTimer=null;
 
   function status(message,kind=""){
     $("pilot-status").textContent=message;
     $("pilot-status").dataset.kind=kind;
+    clearTimeout(noticeTimer);
+    if(message && kind==="ok")noticeTimer=setTimeout(()=>{
+      if($("pilot-status").textContent===message)$("pilot-status").textContent="";
+    },3500);
   }
   function errorMessage(e){
     const d=String(e?.message||e||"").replace(/[<>{}]/g,"");
@@ -106,6 +111,7 @@
       // A real, billed Retell call is initiated by KIMSE Evidence API.
       const data=await api("/calls",{method:"POST",body:JSON.stringify({consent:true,subject_id:window.RAJ_SELECTED_SUBJECT})});
       currentCallId=data.call_id;
+      $("pilot-delete").hidden=false;
       sessionStorage.setItem("raj.evidence.pilot.call",currentCallId);
       $("pilot-call-id").textContent="통화 ID: "+currentCallId;
       show($("pilot-results"),true);
@@ -291,6 +297,7 @@
     try{
       await api("/calls/"+encodeURIComponent(currentCallId),{method:"DELETE"});
       currentCallId="";sessionStorage.removeItem("raj.evidence.pilot.call");
+      $("pilot-delete").hidden=true;
       $("pilot-call-id").textContent="";
       show($("pilot-results"),false);
       clearDraft();
@@ -303,6 +310,7 @@
   function bind(id,handler){$(id).addEventListener("click",()=>{Promise.resolve(handler()).catch(e=>status(errorMessage(e),"error"));});}
   window.RAJ_OPERATIONS_REQUEST=(path,options)=>api("/operations"+path,options);
   window.RAJ_BILLING_REQUEST=(path,options)=>api("/billing"+path,options);
+  $("pilot-delete").hidden=!currentCallId;
   window.RAJ_SELECTED_SUBJECT="";
   window.RAJ_CREDITS_AVAILABLE=false;
   window.RAJ_REFRESH_CALL_BUTTON=()=>setWorking(false);

@@ -11,7 +11,7 @@
     const el=$('pilot-status');el.textContent=message;el.dataset.kind=bad?'error':'ok';
   }
   async function safe(promise){
-    try{return await promise()}catch(e){
+    try{return await (typeof promise==='function'?promise():promise)}catch(e){
       feedback(String(e.message||e).replace(/[<>]/g,''),true);
       return null;
     }

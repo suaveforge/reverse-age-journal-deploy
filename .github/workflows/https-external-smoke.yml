@@ -1,33 +1,43 @@
-name: Verify public HTTPS outside server123
+name: Verify clean Pages front and isolated high-port API
 on:
   push:
     branches: [main]
     paths: [.github/workflows/https-external-smoke.yml]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   https:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 5
     steps:
-      - name: Check public DNS and true CA-verified HTTPS
+      - name: Verify externally without touching shared server 443
         shell: bash
         run: |
-          set -euo pipefail
-          HOST=reverse-age-journal.suaveforge.com
-          echo 'PUBLIC_DNS_V4:'
-          getent ahostsv4 "$HOST" | head -2 || true
-          echo 'PUBLIC_HTTPS_CHECK:'
-          curl --fail --show-error --silent --location --max-time 15 \
-            --retry 6 --retry-delay 5 --retry-all-errors \
-            -o /tmp/raj-page.html -w 'HTTPS_STATUS=%{http_code}\nHTTPS_VERIFY=%{ssl_verify_result}\nHTTPS_REMOTE_IP=%{remote_ip}\n' \
-            "https://$HOST/"
-          grep -q 'Reverse Age Journal' /tmp/raj-page.html
-          echo 'PUBLIC_HTTPS_200=PASS'
-          echo 'PUBLIC_HTTP_REDIRECT_CHECK:'
-          curl -sSI --max-time 12 "http://$HOST/" | sed -n '1,10p'
-          HTTP_LOCATION=$(curl -sS -o /dev/null --max-time 12 -w '%{redirect_url}' "http://$HOST/")
-          case "$HTTP_LOCATION" in
-            "https://$HOST/"*) echo 'PUBLIC_HTTP_TO_HTTPS_REDIRECT=PASS' ;;
-            *) echo "HTTP_REDIRECT_UNEXPECTED=$HTTP_LOCATION"; exit 8 ;;
-          esac
+          set -Eeuo pipefail
+          FRONT=reverse-age-journal.suaveforge.com
+          API=api-reverse-age-journal.suaveforge.com
+          echo "RAJ_EXPECTED_USER_URL=https://$FRONT"
+          echo "RAJ_API_ORIGIN=https://$API:18461"
+          getent ahostsv4 "$FRONT" | head -2 || true
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL --max-time 12 "https://$FRONT/" -o /tmp/raj.html && grep -q 'Reverse Age Journal' /tmp/raj.html; then
+              ok=1; break
+            fi
+            sleep 4
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo 'RAJ_PAGES_HTTPS_NOT_YET_READY'
+            curl -sSI --max-time 12 "http://$FRONT/" | head -12 || true
+            exit 40
+          fi
+          echo 'RAJ_CLEAN_PAGES_HTTPS=PASS'
+          curl -fsS --max-time 16 "https://$API:18461/api/pilot/healthz" | grep -q '"ok":true'
+          echo 'RAJ_HIGHPORT_API_HTTPS=PASS'
+          curl -fsSI --max-time 12 -X OPTIONS -H "Origin: https://$FRONT" \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: x-raj-counselor-code,content-type' \
+            "https://$API:18461/api/pilot/verify" -o /tmp/raj-headers
+          grep -Fiq "Access-Control-Allow-Origin: https://$FRONT" /tmp/raj-headers
+          echo 'RAJ_PAGES_TO_API_CORS=PASS'

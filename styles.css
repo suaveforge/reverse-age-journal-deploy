@@ -328,3 +328,7 @@ dialog::backdrop { background: #10271fb5; }
   .ops-main-card #ops-credit{font-size:39px;}
   .ops-profile-card{padding:20px!important;}
 }
+
+/* Avoid showing saved diaries, past call results or auth-only actions on My Info. */
+.ops-away{display:none!important;}
+.page.counselor-mode #auth-button{display:none!important;}

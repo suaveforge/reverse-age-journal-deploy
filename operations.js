@@ -87,7 +87,7 @@
         })
       });
       await loadSubjects();
-      feedback('내 정보를 저장했습니다.');
+      feedback('저장 완료');
     }finally{$('ops-save-profile').disabled=false;}
   }
   const request=(path,options)=>window.RAJ_OPERATIONS_REQUEST(path,options);
@@ -146,6 +146,9 @@
     if(!selected)return;
     const info=await request('/subjects/'+encodeURIComponent(selected));
     showProfile(info);
+    const trials=(info.credit_history||[]).filter(x=>x.kind==='TRIAL')
+      .reduce((total,x)=>total+Number(x.delta||0),0);
+    $('ops-trial').hidden=trials>=3;
     text('ops-credit','잔여 회기 '+info.balance+'회');
     window.RAJ_CREDITS_AVAILABLE=info.balance>0;
     window.RAJ_REFRESH_CALL_BUTTON?.();
@@ -206,7 +209,7 @@
     const info=await request('/trial-credits',{method:'POST',
       body:JSON.stringify({subject_id:selected,count:3,reason:'COUNSELOR_TRIAL'})});
     await loadSubjects();
-    feedback('체험 회기 3회가 충전됐습니다. 유료 결제는 발생하지 않았습니다.');
+    feedback('체험 3회 충전 완료');
   }
   async function book(){
     if(!selected){feedback('어르신을 먼저 선택해 주세요.',true);return;}

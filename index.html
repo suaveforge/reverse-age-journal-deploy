@@ -61,7 +61,7 @@
         </div>
         <section id="pilot-management" class="pilot-management" hidden aria-labelledby="pilot-management-title">
           <div class="ops-section-top">
-            <h3 id="pilot-management-title">내 정보</h3>
+            <h3 id="pilot-management-title">어르신</h3>
             <button type="button" id="ops-new-person" class="ops-large-outline">+ 어르신 추가</button>
           </div>
           <nav class="ops-tabs" aria-label="관리 메뉴">
@@ -76,9 +76,9 @@
               <label>전화번호<input id="ops-phone" type="tel" placeholder="010-0000-0000" autocomplete="off"></label>
               <label>가족 연락처<input id="ops-family-phone" type="tel" placeholder="010-0000-0000" autocomplete="off"></label>
             </div>
-            <label class="pilot-checkline"><input id="ops-consent" type="checkbox"><span>어르신의 전화·대화 수집 동의를 확인했습니다.</span></label>
-            <label class="pilot-checkline"><input id="ops-family-consent" type="checkbox"><span>가족 연락처로 통화·이용권 안내를 보내는 데 별도 동의받았습니다.</span></label>
-            <label class="pilot-checkline"><input id="ops-recurring-consent" type="checkbox"><span>어르신이 3일 간격 재통화 및 예약 시간 전화에 동의했습니다.</span></label>
+            <label class="pilot-checkline"><input id="ops-consent" type="checkbox"><span>AI 통화·녹음·기록 동의</span></label>
+            <label class="pilot-checkline"><input id="ops-family-consent" type="checkbox"><span>가족 알림 동의</span></label>
+            <label class="pilot-checkline"><input id="ops-recurring-consent" type="checkbox"><span>자동 재통화·예약전화 동의</span></label>
             <button id="ops-add" class="big-button outline" type="button">어르신 등록 <span aria-hidden="true">+</span></button>
           </div>
           <div class="pilot-management-card ops-main-card" id="ops-subject-panel" data-ops-panel="info">
@@ -167,7 +167,7 @@
         <div id="pilot-call-panel" hidden>
           <label class="pilot-checkline">
             <input id="pilot-consent" type="checkbox">
-            <span>참여자로부터 AI 대화·녹음·Evidence 48시간 보관 동의를 받았습니다.</span>
+            <span>AI 대화·녹음 및 기록 동의</span>
           </label>
           <div class="pilot-call-actions">
             <button id="pilot-start" class="big-button primary" type="button">AI 통화 시작 <span aria-hidden="true">↗</span></button>

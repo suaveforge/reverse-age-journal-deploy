@@ -82,7 +82,7 @@ jobs:
                   expect(page.locator('#ops-appointments')).to_contain_text('예약됨')
                   page.locator('#ops-report-month').fill('2026-10')
                   page.locator('#ops-report').click()
-                  expect(page.locator('#ops-report-output')).to_contain_text('한 달 이야기')
+                  assert '한 달 이야기' in page.locator('#ops-report-output').input_value()
                   assert page.evaluate('document.documentElement.scrollWidth')==size[0], 'horizontal overflow'
                   assert not errors,errors
                   print('RAJ_COUNSELOR_OPERATIONS_UI_'+('DESKTOP' if size[0]>600 else 'MOBILE')+'=PASS',flush=True)

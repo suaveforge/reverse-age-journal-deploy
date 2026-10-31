@@ -16,7 +16,7 @@ jobs:
           set -euo pipefail
           python3 -m pip -q install playwright
           cat >/tmp/raj-ops-ui.py <<'PY'
-          import json
+          import json,re
           from playwright.sync_api import sync_playwright,expect
           URL='https://reverse-age-journal.suaveforge.com:18461/?mode=counselor'
           state={'created':False,'credits':0,'bookings':[]}
@@ -89,7 +89,7 @@ jobs:
                   expect(page.locator('#ops-appointments')).to_contain_text('예약됨')
                   page.locator('#ops-report-month').fill('2026-10')
                   page.locator('#ops-report').click()
-                  assert '한 달 이야기' in page.locator('#ops-report-output').input_value()
+                  expect(page.locator('#ops-report-output')).to_have_value(re.compile('한 달 이야기'),timeout=12000)
                   assert page.evaluate('document.documentElement.scrollWidth')==size[0], 'horizontal overflow'
                   assert not errors,errors
                   print('RAJ_COUNSELOR_OPERATIONS_UI_'+('DESKTOP' if size[0]>600 else 'MOBILE')+'=PASS',flush=True)

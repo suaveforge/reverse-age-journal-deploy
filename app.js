@@ -85,7 +85,7 @@
       }); } catch {}
     }
     recipients = []; selectedId = ''; operator = false;
-    resetDashboard(); renderSelect(); renderOperator();
+    resetDashboard(); renderSelect(); renderOperator(); view(currentView);
   }
 
   function resetDashboard() {
@@ -225,12 +225,23 @@
     $('family-view').hidden=name!=='family';
     $('operator-view').hidden=name!=='operator';
     $('workspace-title').textContent=name==='family'?'우리 가족의 기록':'상담사 관리';
+    $('workspace').hidden = !session;
+    if(name==='operator') {
+      $('hero-title').innerHTML='통화 일정과 기록,<br><span>한곳에서 관리합니다.</span>';
+      document.querySelector('.hero-subtitle').textContent='상담사를 위한 관리 공간.';
+      $('start-button').querySelector('span').textContent=(session && operator)?'이용권 등록하기':'상담사 로그인';
+      $('reserve-button').hidden=true;
+    }else{
+      $('hero-title').innerHTML='전화로 나눈 하루,<br><span>일기로 남깁니다.</span>';
+      document.querySelector('.hero-subtitle').textContent='어르신은 전화로 이야기하고, 가족은 일기로 읽습니다.';
+      $('start-button').querySelector('span').textContent='가족 등록하기';
+      $('reserve-button').hidden=false;
+    }
     $('recipient-select').disabled=name!=='family';
     $('recipient-label').hidden=name!=='family';
     if(name==='operator')renderOperator().catch(e=>readyNotice(String(e.message||e)));
   }
   async function init() {
-    if (!appReady) readyNotice('로그인·결제 연결 준비 중입니다.');
     session=readSession();
     try{await loginCallback();}catch(e){readyNotice(String(e.message||e));}
     if(session && appReady){
@@ -266,7 +277,7 @@
   }
 
   $('auth-button').addEventListener('click',()=>session?logout():startLogin());
-  $('start-button').addEventListener('click',addFamily);
+  $('start-button').addEventListener('click',()=>currentView==='operator' ? (session && operator?addPackage():startLogin()) : addFamily());
   $('reserve-button').addEventListener('click',addReservation);
   $('new-package-button').addEventListener('click',addPackage);
   $('modal-close').addEventListener('click',closeModal);

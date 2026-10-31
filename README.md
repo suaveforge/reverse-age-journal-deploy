@@ -4,11 +4,11 @@ Public, static, credential-free frontend for the independent Reverse Age Journal
 
 ## Public hosting
 
-Primary HTTPS site: **https://reverse-age-journal.suaveforge.com/**
+Primary direct HTTPS site: **https://reverse-age-journal.suaveforge.com:18461/**
 
-The static web assets are served by the existing server123 Caddy using a dedicated Let's Encrypt certificate. Spaceship `A` record points the domain to `211.255.25.123`. Public HTTPS and HTTP-to-HTTPS redirect have been independently verified.
+The public service uses a dedicated Nginx container listening on server123 high port `18461`, with its own valid Let's Encrypt certificate. It does not use Caddy. Spaceship DNS resolves the hostname to `211.255.25.123`.
 
-The private `suaveforge/reverse-age-journal` repository is the authoritative source; its `web/` changes are deployed automatically to server123. This public repository is a source-controlled static asset mirror.
+The private `suaveforge/reverse-age-journal` repository is the authoritative source. Its `web/` changes deploy to the dedicated `direct-site` volume. This repository is a static asset mirror.
 
 ## Configure
 

@@ -1,0 +1,52 @@
+name: Enforce HTTPS when GitHub Pages TLS is issued
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/enable-pages-https.yml]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+jobs:
+  https:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check exact Pages certificate and enforce HTTPS only if ready
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SITE=reverse-age-journal.suaveforge.com
+          BASE=https://api.github.com/repos/suaveforge/reverse-age-journal-deploy/pages
+          HEADER="Authorization: Bearer $GH_TOKEN"
+          curl -fsS -H "$HEADER" -H 'Accept: application/vnd.github+json' "$BASE" -o /tmp/pages.json
+          echo "PAGES_DOMAIN=$(jq -r '.cname // ""' /tmp/pages.json)"
+          echo "PAGES_STATUS=$(jq -r '.status // ""' /tmp/pages.json)"
+          echo "PAGES_CERT_STATE=$(jq -r '.https_certificate.state // "not-issued"' /tmp/pages.json)"
+          echo "PAGES_HTTPS_ENFORCED=$(jq -r '.https_enforced' /tmp/pages.json)"
+          test "$(jq -r '.cname // ""' /tmp/pages.json)" = "$SITE"
+          if test "$(jq -r '.https_enforced' /tmp/pages.json)" = true; then
+            echo 'RAJ_PAGES_HTTPS_ENFORCED=PASS'
+          elif test "$(jq -r '.https_certificate.state // ""' /tmp/pages.json)" = approved; then
+            status="$(curl -sS -o /tmp/enforce.json -w '%{http_code}' \
+              -X PUT -H "$HEADER" -H 'Accept: application/vnd.github+json' \
+              -H 'Content-Type: application/json' "$BASE" -d '{"https_enforced":true}')"
+            echo "PAGES_FORCE_HTTPS_HTTP_STATUS=$status"
+            if test "$status" != 204; then
+              jq -r '.message // ""' /tmp/enforce.json | head -c 300 || true
+              exit 24
+            fi
+            curl -fsS -H "$HEADER" -H 'Accept: application/vnd.github+json' "$BASE" -o /tmp/pages.json
+            test "$(jq -r '.https_enforced' /tmp/pages.json)" = true
+            echo 'RAJ_PAGES_HTTPS_ENFORCED=PASS'
+          else
+            echo 'RAJ_PAGES_CERT_PENDING_GITHUB_ISSUANCE'
+            exit 0
+          fi
+          curl -fsS --max-time 15 "https://$SITE/" -o /tmp/front.html
+          grep -q 'Reverse Age Journal' /tmp/front.html
+          echo 'RAJ_EXTERNAL_CERT_AND_HTTPS=PASS'

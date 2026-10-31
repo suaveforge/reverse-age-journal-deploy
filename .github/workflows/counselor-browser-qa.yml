@@ -23,7 +23,7 @@ jobs:
           python3 -m pip -q install playwright
           cat >/tmp/raj_counselor.py <<'PY'
           import json
-          from playwright.sync_api import sync_playwright
+          from playwright.sync_api import sync_playwright, expect
           ROOT='https://reverse-age-journal.suaveforge.com:18461/'
           with sync_playwright() as p:
               browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
@@ -46,7 +46,7 @@ jobs:
                   assert api['status']==200 and api['body']['mode']=='evidence-retell-bridge',api
                   page.locator('#pilot-access').fill('wrong-operator-code-123')
                   page.locator('#pilot-verify').click()
-                  page.wait_for_function('document.querySelector("#pilot-status").textContent.includes("접근 코드가 맞지")',timeout=12000)
+                  expect(page.locator('#pilot-status')).to_contain_text('접근 코드가 맞지',timeout=12000)
                   assert page.locator('#pilot-call-panel').is_hidden()
                   assert not errors,errors
                   print('COUNSELOR_UI_'+mode.upper()+'=PASS',flush=True)

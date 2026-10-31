@@ -73,7 +73,7 @@
       show($("pilot-login"),false);
       show($("pilot-call-panel"),true);
       window.dispatchEvent(new Event("raj:pilot-connected"));
-      status("연결됐습니다. 어르신을 등록하거나 선택하고 통화를 시작하세요.","ok");
+      status("");
       setWorking(false);
       // Diary retrieval can fail independently of successful operator verification.
       // Do not invalidate the verified operator code on a secondary API error.

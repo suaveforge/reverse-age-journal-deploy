@@ -84,11 +84,12 @@ jobs:
                   page.route('**/api/pilot/**',fulfill)
                   r=page.goto(URL,wait_until='networkidle',timeout=40000)
                   assert r.status==200
-                  assert page.locator('.hero').is_hidden()
-                  assert page.locator('.header-actions').is_hidden()
-                  assert page.locator('#workspace').is_hidden()
+                  assert page.locator('#family-journey').is_visible()
+                  assert page.locator('#counselor-pilot').is_hidden()
+                  assert page.evaluate('document.body.scrollHeight')<=size[1]+110, 'public intro must fit one screen'
+                  page.locator('#admin-entry').click()
+                  assert page.locator('#family-journey').is_hidden()
                   assert page.locator('#pilot-login').is_visible()
-                  assert page.evaluate('document.body.scrollHeight')<=size[1]+100, 'login must fit one screen'
                   page.locator('#pilot-access').fill('fake-counselor-access-code-987')
                   page.locator('#pilot-verify').click()
                   expect(page.locator('#pilot-management')).to_be_visible(timeout=12000)

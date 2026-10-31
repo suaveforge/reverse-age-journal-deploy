@@ -1,10 +1,11 @@
-/* Counselor end-to-end pilot. All API calls go to this origin.
+/* Counselor end-to-end pilot. Requests use a dedicated verified HTTPS high-port API origin.
  * Access code is in JS memory only; no URL, localStorage or console logs.
  * The actual paid call is created only after deliberate consent + confirmation.
  */
 (() => {
   "use strict";
   const $=id=>document.getElementById(id);
+  const PILOT_API = String(window.RAJ_CONFIG?.pilotApiBase || "").replace(/\/$/, "");
   if(!$("pilot-access"))return;
   let operatorCode="";
   let client=null;
@@ -34,7 +35,7 @@
   }
   async function api(path,options={}){
     if(!operatorCode)throw Error("운영자 접근 코드를 입력해 주세요.");
-    const response=await fetch("/api/pilot"+path,{
+    const response=await fetch(PILOT_API+"/api/pilot"+path,{
       ...options,cache:"no-store",
       headers:{"X-RAJ-COUNSELOR-CODE":operatorCode,
         ...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})}
@@ -275,7 +276,7 @@
     if(!currentCallId)return;
     status("녹음을 가져오고 있습니다.");
     try{
-      const r=await fetch("/api/pilot/calls/"+encodeURIComponent(currentCallId)+"/audio",
+      const r=await fetch(PILOT_API+"/api/pilot/calls/"+encodeURIComponent(currentCallId)+"/audio",
           {headers:{"X-RAJ-COUNSELOR-CODE":operatorCode},cache:"no-store"});
       if(!r.ok)throw Error((await r.json().catch(()=>({}))).detail||"RECORDING_NOT_AVAILABLE");
       if(audioObjectUrl)URL.revokeObjectURL(audioObjectUrl);

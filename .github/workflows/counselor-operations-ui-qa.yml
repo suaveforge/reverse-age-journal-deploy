@@ -106,6 +106,9 @@ jobs:
                   assert state['profile']['retry_limit']==2
                   page.locator('#ops-trial').click()
                   expect(page.locator('#ops-credit')).to_contain_text('3회')
+                  expect(page.locator('#pilot-saved')).to_be_hidden()
+                  expect(page.locator('#auth-button')).to_be_hidden()
+                  expect(page.locator('#ops-trial')).to_be_hidden()
                   shot=page.screenshot(full_page=True)
                   pic=Image.open(io.BytesIO(shot)).convert('RGB')
                   pic.thumbnail((830,1150))

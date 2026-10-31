@@ -15,10 +15,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip -q install playwright
+          python3 -m pip -q install playwright pillow
           python3 -m http.server 18761 --bind 127.0.0.1 >/tmp/raj-local-http.log 2>&1 &
           cat >/tmp/raj-ops-ui.py <<'PY'
-          import json,re
+          import json,re,io,base64
+          from PIL import Image
           from playwright.sync_api import sync_playwright,expect
           URL='http://127.0.0.1:18761/?mode=counselor'
           state={'created':False,'credits':0,'bookings':[],'profile':None}
@@ -105,6 +106,12 @@ jobs:
                   assert state['profile']['retry_limit']==2
                   page.locator('#ops-trial').click()
                   expect(page.locator('#ops-credit')).to_contain_text('3회')
+                  shot=page.screenshot(full_page=True)
+                  pic=Image.open(io.BytesIO(shot)).convert('RGB')
+                  pic.thumbnail((830,1150))
+                  buffer=io.BytesIO()
+                  pic.save(buffer,format='JPEG',quality=65,optimize=True)
+                  print('RAJ_INFO_IMAGE_'+('DESKTOP' if size[0]>600 else 'MOBILE')+'='+base64.b64encode(buffer.getvalue()).decode(),flush=True)
                   page.locator('[data-ops-tab="tickets"]').click()
                   expect(page.locator('#ops-ticket-history')).to_contain_text('체험 충전')
                   expect(page.locator('#ops-payhub-status')).to_contain_text('연결되지 않았습니다')

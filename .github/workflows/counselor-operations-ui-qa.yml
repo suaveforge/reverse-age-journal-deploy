@@ -1,0 +1,93 @@
+name: Counselor complete operations UI journey (mocked, no real calls)
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/counselor-operations-ui-qa.yml]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Validate counselor buttons against deterministic non-billable API fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright
+          cat >/tmp/raj-ops-ui.py <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright,expect
+          URL='https://reverse-age-journal.suaveforge.com:18461/?mode=counselor'
+          state={'created':False,'credits':0,'bookings':[]}
+          def fulfill(route):
+              req=route.request
+              path=req.url.split('/api/pilot/',1)[-1].split('?',1)[0]
+              status=200
+              body={}
+              if path=='verify' and req.method=='POST':
+                  body={'authorized':True,'evidence_connected':True}
+              elif path=='operations/subjects' and req.method=='GET':
+                  body={'subjects':[{'id':'person_mock001','name':'테스트 이름','balance':state['credits']}] if state['created'] else []}
+              elif path=='operations/subjects' and req.method=='POST':
+                  state['created']=True
+                  body={'id':'person_mock001','name':'테스트 이름'}
+                  status=201
+              elif path=='operations/subjects/person_mock001':
+                  body={'subject':{'id':'person_mock001','name':'테스트 이름'},
+                       'balance':state['credits'],
+                       'script':{'stage':'FIRST','prompt':'오늘 하루를 편안히 이야기해 주세요.','prior_story':None},
+                       'appointments':state['bookings']}
+              elif path=='operations/trial-credits':
+                  state['credits']=3
+                  body={'balance':3,'credits_kind':'TRIAL_NOT_PAYMENT'}
+              elif path=='operations/bookings':
+                  state['bookings']=[{'id':'appt_mock','due_at':'2026-11-04T05:00:00+00:00','state':'SCHEDULED','attempt_count':0}]
+                  body={'appointment_id':'appt_mock','automatic_phone_delivery_enabled':False}
+                  status=201
+              elif path=='operations/outbox':
+                  body={'messages':[],'delivery_enabled':False}
+              elif path=='operations/subjects/person_mock001/monthly-report':
+                  body={'month':'2026-10','name':'테스트 이름','calls_completed':1,
+                    'diaries_saved':1,'credits_remaining':2,
+                    'stories':[{'title':'오늘의 기록','excerpt':'실제 대화에서 나온 내용만 기록'}]}
+              else:
+                  status=404;body={'detail':'FIXTURE_NOT_DEFINED:'+path}
+              route.fulfill(status=status,content_type='application/json',body=json.dumps(body,ensure_ascii=False))
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+              for size in [(1365,900),(390,844)]:
+                  state.update({'created':False,'credits':0,'bookings':[]})
+                  page=browser.new_page(viewport={'width':size[0],'height':size[1]})
+                  errors=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  page.route('**/api/pilot/**',fulfill)
+                  r=page.goto(URL,wait_until='networkidle',timeout=40000)
+                  assert r.status==200
+                  page.locator('#pilot-access').fill('fake-counselor-access-code-987')
+                  page.locator('#pilot-verify').click()
+                  expect(page.locator('#pilot-management')).to_be_visible(timeout=12000)
+                  page.locator('#ops-name').fill('테스트 이름')
+                  page.locator('#ops-phone').fill('01012345678')
+                  page.locator('#ops-family-phone').fill('01098765432')
+                  page.locator('#ops-consent').check()
+                  page.locator('#ops-recurring-consent').check()
+                  page.locator('#ops-family-consent').check()
+                  page.locator('#ops-add').click()
+                  expect(page.locator('#pilot-subject-select')).to_have_value('person_mock001')
+                  page.locator('#ops-trial').click()
+                  expect(page.locator('#ops-credit')).to_contain_text('3회')
+                  page.locator('#ops-date').fill('2026-11-04T14:00')
+                  page.locator('#ops-book').click()
+                  expect(page.locator('#ops-appointments')).to_contain_text('예약됨')
+                  page.locator('#ops-report-month').fill('2026-10')
+                  page.locator('#ops-report').click()
+                  expect(page.locator('#ops-report-output')).to_contain_text('한 달 이야기')
+                  assert page.evaluate('document.documentElement.scrollWidth')==size[0], 'horizontal overflow'
+                  assert not errors,errors
+                  print('RAJ_COUNSELOR_OPERATIONS_UI_'+('DESKTOP' if size[0]>600 else 'MOBILE')+'=PASS',flush=True)
+                  page.close()
+              browser.close()
+          print('RAJ_NO_REAL_CALLS_OR_CUSTOMER_RECORDS_CREATED=PASS')
+          PY
+          python3 /tmp/raj-ops-ui.py

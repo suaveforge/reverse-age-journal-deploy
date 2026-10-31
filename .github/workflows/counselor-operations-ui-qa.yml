@@ -1,4 +1,4 @@
-name: Counselor complete operations UI journey (mocked, no real calls)
+name: Counselor local-source operations UI QA (no real calls)
 on:
   push:
     branches: [main]
@@ -10,15 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
+      - uses: actions/checkout@v4
       - name: Validate counselor buttons against deterministic non-billable API fixtures
         shell: bash
         run: |
           set -euo pipefail
           python3 -m pip -q install playwright
+          python3 -m http.server 18761 --bind 127.0.0.1 >/tmp/raj-local-http.log 2>&1 &
           cat >/tmp/raj-ops-ui.py <<'PY'
           import json,re
           from playwright.sync_api import sync_playwright,expect
-          URL='https://reverse-age-journal.suaveforge.com:18461/?mode=counselor'
+          URL='http://127.0.0.1:18761/?mode=counselor'
           state={'created':False,'credits':0,'bookings':[],'profile':None}
           def fulfill(route):
               req=route.request

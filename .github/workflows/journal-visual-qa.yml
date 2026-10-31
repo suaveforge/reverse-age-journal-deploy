@@ -40,14 +40,16 @@ jobs:
                   assert sz['viewport']==sz['scrollWidth'], 'horizontal overflow '+kind
                   assert len(sz['primaryButtons'])==2
                   assert all(x['height']>=65 for x in sz['primaryButtons'])
+                  assert not page.locator('#workspace').is_visible(), 'logged-out dashboard should be hidden'
                   page.locator('[data-view="operator"]').click()
-                  assert page.locator('#operator-view').is_visible()
-                  assert not page.locator('#family-view').is_visible()
+                  assert '한곳에서 관리' in page.locator('#hero-title').inner_text()
+                  assert page.locator('#reserve-button').is_hidden()
+                  assert '상담사 로그인' in page.locator('#start-button').inner_text()
                   page.locator('[data-view="family"]').click()
-                  assert page.locator('#family-view').is_visible()
-                  if kind=='mobile':
-                      page.locator('#start-button').click()
-                      assert page.locator('#readiness').is_visible()
+                  assert '일기로 남깁니다' in page.locator('#hero-title').inner_text()
+                  assert page.locator('#reserve-button').is_visible()
+                  page.locator('#start-button').click()
+                  assert page.locator('#readiness').is_visible()
                   image=Image.open('/tmp/raj-'+kind+'.png').convert('RGB')
                   image.thumbnail((800,1100))
                   buf=io.BytesIO()

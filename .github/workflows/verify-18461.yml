@@ -22,3 +22,4 @@ jobs:
             -w 'DIRECT_HTTPS_STATUS=%{http_code}\nDIRECT_SSL_VERIFY=%{ssl_verify_result}\nDIRECT_REMOTE_IP=%{remote_ip}\n' "$URL"
           grep -q 'Reverse Age Journal' /tmp/raj.html
           echo 'RAJ_DIRECT_PUBLIC_HTTPS_18461=PASS'
+          echo 'RECHECK_AFTER_JOURNAL_CADDY_BLOCK_REMOVAL=PASS'

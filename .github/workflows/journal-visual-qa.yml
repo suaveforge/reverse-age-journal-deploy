@@ -41,6 +41,8 @@ jobs:
                   assert len(sz['primaryButtons'])==2
                   assert all(x['height']>=65 for x in sz['primaryButtons'])
                   assert not page.locator('#workspace').is_visible(), 'logged-out dashboard should be hidden'
+                  assert page.locator('.site-footer').count()==0, 'unnecessary duplicate footer'
+                  assert page.locator('.hero-label').count()==0, 'unnecessary eyebrow copy'
                   page.locator('[data-view="operator"]').click()
                   assert '한곳에서 관리' in page.locator('#hero-title').inner_text()
                   assert page.locator('#reserve-button').is_hidden()

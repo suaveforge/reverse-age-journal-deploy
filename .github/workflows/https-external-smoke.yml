@@ -1,0 +1,26 @@
+name: Verify public HTTPS outside server123
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/https-external-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  https:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check public DNS and true CA-verified HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST=reverse-age-journal.suaveforge.com
+          echo 'PUBLIC_DNS_V4:'
+          getent ahostsv4 "$HOST" | head -2 || true
+          echo 'PUBLIC_HTTPS_CHECK:'
+          curl --fail --show-error --silent --location --max-time 15 \
+            --retry 6 --retry-delay 5 --retry-all-errors \
+            -o /tmp/raj-page.html -w 'HTTPS_STATUS=%{http_code}\nHTTPS_VERIFY=%{ssl_verify_result}\nHTTPS_REMOTE_IP=%{remote_ip}\n' \
+            "https://$HOST/"
+          grep -q 'Reverse Age Journal' /tmp/raj-page.html
+          echo 'PUBLIC_HTTPS_200=PASS'

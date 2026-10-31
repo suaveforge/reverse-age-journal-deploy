@@ -246,9 +246,20 @@
     }
     const params=new URLSearchParams(location.search);
     if(params.has('payment_status')) {
-      // Never credit on redirect. Refresh the verified server-side wallet only.
+      // A redirect is never payment proof. The backend rechecks PayHub securely.
+      const sessionId=params.get('payment_session_id')||'';
+      const shouldReconcile=params.get('payment_status')==='paid';
       params.delete('payment_status');params.delete('payment_session_id');
       history.replaceState(null,'',location.pathname+(params.toString()?'?'+params:'')+location.hash);
+      if(session && selectedId && shouldReconcile && sessionId) {
+        try {
+          await request('/api/payments/reconcile',{
+            method:'POST',body:JSON.stringify({session_id:sessionId})
+          });
+        }catch(error){
+          readyNotice('결제 확인 중입니다. 잠시 후 이용 내역에서 다시 확인해 주세요. ('+String(error.message||error)+')');
+        }
+      }
       if(session && selectedId)await loadDashboard().catch(()=>{});
     }
     renderSelect();view(currentView);

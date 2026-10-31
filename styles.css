@@ -419,3 +419,86 @@ font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decorati
 .page .pilot-status:not(:empty){position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;max-width:min(720px,calc(100vw - 30px));width:max-content;box-shadow:0 12px 40px #193b3226;border:2px solid #c6d7c6}
 .page .pilot-status:empty{display:none!important}
 .page #ops-outbox-panel[hidden],.page #pilot-delete[hidden],.page .ops-tabs[hidden]{display:none!important}
+
+
+/* Real family-first journey; a single action at a time, no fake login buttons. */
+.page .admin-entry {
+  display:inline-flex;align-items:center;justify-content:center;flex:none;
+  border:1px solid #c2d3c5;background:#fff;border-radius:13px;
+  color:#284639;padding:11px 16px;min-height:45px;
+  font-size:16px;line-height:1.3;font-weight:800;
+}
+.page .admin-entry:hover {background:#edf4ed}
+.page.family-mode #family-journey{display:block}
+.page .family-journey{max-width:920px;margin:0 auto;padding:clamp(36px,6vw,70px) 0 48px;}
+.page .family-shell{min-height:0}
+.page .family-title{
+  color:#173a30;font-size:clamp(38px,5.7vw,70px);line-height:1.28;
+  letter-spacing:-.075em;font-weight:850;word-break:keep-all;
+  margin:0 0 clamp(28px,4vw,45px);
+}
+.page .family-subtitle{font-size:clamp(24px,2.8vw,30px);line-height:1.45;font-weight:700;margin:0 0 24px}
+.page .family-body{max-width:780px}
+.page .family-button{
+  display:flex;align-items:center;justify-content:space-between;text-align:left;
+  background:var(--green);border:2px solid var(--green);color:#fff;
+  width:100%;max-width:780px;border-radius:18px;padding:22px 28px;
+  min-height:91px;font-size:clamp(24px,3vw,31px);font-weight:850;
+  margin:15px 0;cursor:pointer;letter-spacing:-.045em;
+}
+.page .family-button:hover{background:#0f392c}
+.page .family-button.outline{background:#fff;color:var(--green);border-color:#b1c7b5}
+.page .family-button.outline:hover{background:#edf5ec}
+.page .family-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.page .family-choices .family-button{margin:0;min-height:148px;justify-content:center;text-align:center}
+.page .family-form label:not(.family-consent){
+  font-size:clamp(23px,2.7vw,29px);font-weight:850;color:var(--ink);display:block;margin:20px 0 10px
+}
+.page .family-form input:not([type="checkbox"]){
+  border:2px solid #b0c6b3;border-radius:15px;background:#fff;color:var(--ink);
+  width:100%;min-height:76px;font-size:clamp(23px,2.8vw,29px);
+  padding:15px 20px;min-width:0;
+}
+.page .family-form input:focus{border-color:#326e50;outline:3px solid #c6e1c7}
+.page .family-form .family-button{margin-top:25px}
+.page .family-consent{display:flex;align-items:center;gap:16px;
+  font-size:clamp(20px,2.4vw,26px);font-weight:800;line-height:1.45;
+  word-break:keep-all;margin:22px 0;
+}
+.page .family-consent input{flex:none;width:30px;height:30px;accent-color:var(--green)}
+.page .family-back{border:0;background:transparent;color:#526f5a;
+  min-height:50px;font-size:clamp(19px,2.3vw,24px);font-weight:800;
+  padding:9px 0;cursor:pointer;margin:0 0 24px;
+}
+.page .family-body>.family-back{margin:22px 0 0}
+.page .family-error{background:#fff0ed;border-radius:12px;color:#9c3934;
+  font-size:clamp(21px,2.5vw,26px);font-weight:800;padding:16px 20px
+}
+.page .family-important{font-size:clamp(20px,2.4vw,25px);line-height:1.5;
+  font-weight:750;color:#704f34;word-break:keep-all;margin:18px 0 25px;
+}
+.page .family-amount{font-size:clamp(35px,5vw,50px);font-weight:850;color:var(--green);
+  background:#e6f1e7;border-radius:18px;padding:32px;margin:0 0 19px;
+}
+.page .family-confirm{display:grid;gap:14px;background:#e6f1e7;
+  border-radius:18px;padding:clamp(25px,4vw,40px);margin:0 0 24px
+}
+.page .family-confirm strong{font-size:clamp(24px,2.8vw,31px);line-height:1.45;font-weight:850;word-break:keep-all}
+.page .family-no-record{padding:35px 25px;background:#e8f0e8;
+  border-radius:18px;font-size:clamp(27px,3.5vw,36px);
+  color:var(--green);font-weight:850;line-height:1.45;
+}
+@media (max-width:700px){
+ .page .site-header{display:flex;flex-wrap:nowrap;align-items:center;gap:10px}
+ .page .admin-entry{font-size:14px;min-height:45px;padding:10px 12px}
+ .page .family-journey{padding:40px 0 25px}
+ .page .family-title{font-size:clamp(36px,10vw,52px);margin-bottom:27px}
+ .page .family-button{min-height:85px;padding:18px 22px;font-size:26px}
+ .page .family-choices{grid-template-columns:1fr;gap:13px}
+ .page .family-choices .family-button{min-height:88px}
+ .page .family-back{margin-bottom:16px}
+ .page .family-form label:not(.family-consent){margin:12px 0 9px}
+ .page .family-form input:not([type="checkbox"]){min-height:68px}
+ .page .family-consent{margin:18px 0}
+ .page .family-amount{padding:23px}
+}

@@ -118,12 +118,12 @@
       document.getElementById('family-reserve').addEventListener('click',reserve);
       document.getElementById('family-reserve-form').addEventListener('submit',e=>{e.preventDefault();reserve();});
     }else if(state.step===6){
-      frame('예약 완료',
+      frame('예약 체험 완료',
         '<div class="family-confirm">'+
         '<strong>'+esc(state.elder)+' 어르신</strong>'+
         '<strong>'+esc(formatDate(state.bookedAt))+'</strong>'+
-        '<strong>남은 이용권 '+state.credits+'회</strong></div>'+
-        button('기록 확인','family-record','primary')+
+        '<strong>체험 이용권 '+state.credits+'회</strong></div>'+
+        '<p class="family-important">실제 예약이나 전화 발신은 진행되지 않았습니다.</p>'+button('기록 확인','family-record','primary')+
         '<button id="family-reset" class="family-back" type="button">처음부터 다시 체험</button>');
       document.getElementById('family-record').addEventListener('click',()=>next(7));
       document.getElementById('family-reset').addEventListener('click',reset);

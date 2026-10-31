@@ -2,7 +2,7 @@ name: Counselor complete operations UI journey (mocked, no real calls)
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/counselor-operations-ui-qa.yml]
+    paths: [.github/workflows/counselor-operations-ui-qa.yml, index.html, operations.js, styles.css]
 permissions:
   contents: read
 jobs:
@@ -19,7 +19,7 @@ jobs:
           import json,re
           from playwright.sync_api import sync_playwright,expect
           URL='https://reverse-age-journal.suaveforge.com:18461/?mode=counselor'
-          state={'created':False,'credits':0,'bookings':[]}
+          state={'created':False,'credits':0,'bookings':[],'profile':None}
           def fulfill(route):
               req=route.request
               path=req.url.split('/api/pilot/',1)[-1].split('?',1)[0]
@@ -31,13 +31,25 @@ jobs:
                   body={'subjects':[{'id':'person_mock001','name':'테스트 이름','balance':state['credits']}] if state['created'] else []}
               elif path=='operations/subjects' and req.method=='POST':
                   state['created']=True
+                  state['profile']={
+                    'id':'person_mock001','name':'테스트 이름','phone':'+821012345678',
+                    'family_phone':'+821098765432','participant_consent':True,
+                    'recurring_consent':True,'family_notifications_consent':True,
+                    'followup_days':3,'retry_limit':3,'preferred_hour':14}
                   body={'id':'person_mock001','name':'테스트 이름'}
                   status=201
               elif path=='operations/subjects/person_mock001':
-                  body={'subject':{'id':'person_mock001','name':'테스트 이름'},
-                       'balance':state['credits'],
-                       'script':{'stage':'FIRST','prompt':'오늘 하루를 편안히 이야기해 주세요.','prior_story':None},
-                       'appointments':state['bookings']}
+                  if req.method=='PATCH':
+                      new=req.post_data_json
+                      state['profile'].update(new)
+                      body={'saved':True,'subject_id':'person_mock001'}
+                  else:
+                      body={'subject':state['profile'],
+                         'balance':state['credits'],
+                         'completed_calls':0,
+                         'credit_history':([{'delta':state['credits'],'kind':'TRIAL','created_at':'2026-10-31'}] if state['credits'] else []),
+                         'script':{'stage':'FIRST','prompt':'오늘 하루를 편안히 이야기해 주세요.','prior_story':None},
+                         'appointments':state['bookings']}
               elif path=='operations/trial-credits':
                   state['credits']=3
                   body={'balance':3,'credits_kind':'TRIAL_NOT_PAYMENT'}
@@ -62,7 +74,7 @@ jobs:
           with sync_playwright() as p:
               browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
               for size in [(1365,900),(390,844)]:
-                  state.update({'created':False,'credits':0,'bookings':[]})
+                  state.update({'created':False,'credits':0,'bookings':[],'profile':None})
                   page=browser.new_page(viewport={'width':size[0],'height':size[1]})
                   errors=[]
                   page.on('pageerror',lambda e:errors.append(str(e)))
@@ -79,14 +91,27 @@ jobs:
                   page.locator('#ops-recurring-consent').check()
                   page.locator('#ops-family-consent').check()
                   page.locator('#ops-add').click()
-                  expect(page.locator('#ops-payhub-status')).to_contain_text('아직 연결되지 않았습니다')
-                  expect(page.locator('#ops-pay-checkout')).to_be_disabled()
                   expect(page.locator('#pilot-subject-select')).to_have_value('person_mock001')
+                  expect(page.locator('#ops-profile-panel')).to_be_visible()
+                  page.locator('#ops-edit-name').fill('변경된 이름')
+                  page.locator('#ops-followup-days').select_option('7')
+                  page.locator('#ops-retry-limit').select_option('2')
+                  page.locator('#ops-preferred-hour').select_option('16')
+                  page.locator('#ops-save-profile').click()
+                  expect(page.locator('#ops-edit-name')).to_have_value('변경된 이름',timeout=12000)
+                  assert state['profile']['followup_days']==7
+                  assert state['profile']['retry_limit']==2
                   page.locator('#ops-trial').click()
                   expect(page.locator('#ops-credit')).to_contain_text('3회')
+                  page.locator('[data-ops-tab="tickets"]').click()
+                  expect(page.locator('#ops-ticket-history')).to_contain_text('체험 충전')
+                  expect(page.locator('#ops-payhub-status')).to_contain_text('연결되지 않았습니다')
+                  expect(page.locator('#ops-pay-checkout')).to_be_disabled()
+                  page.locator('[data-ops-tab="call"]').click()
                   page.locator('#ops-date').fill('2026-11-04T14:00')
                   page.locator('#ops-book').click()
                   expect(page.locator('#ops-appointments')).to_contain_text('예약됨')
+                  page.locator('[data-ops-tab="record"]').click()
                   page.locator('#ops-report-month').fill('2026-10')
                   page.locator('#ops-report').click()
                   expect(page.locator('#ops-report-output')).to_have_value(re.compile('가족 이야기 기록'),timeout=12000)

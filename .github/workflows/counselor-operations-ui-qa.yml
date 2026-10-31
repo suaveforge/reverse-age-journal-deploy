@@ -74,6 +74,11 @@ jobs:
                   page.locator('#ops-recurring-consent').check()
                   page.locator('#ops-family-consent').check()
                   page.locator('#ops-add').click()
+                  print('OPS_AFTER_REGISTER='+json.dumps({
+                    'state':state,'status':page.locator('#pilot-status').inner_text(),
+                    'selector':page.locator('#pilot-subject-select').input_value(),
+                    'errors':errors
+                  },ensure_ascii=False),flush=True)
                   expect(page.locator('#pilot-subject-select')).to_have_value('person_mock001')
                   page.locator('#ops-trial').click()
                   expect(page.locator('#ops-credit')).to_contain_text('3회')

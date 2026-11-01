@@ -128,7 +128,8 @@
         guest_token:state.guestToken,guardian_name:state.family,
         guardian_phone:state.guardianPhone,elder_name:elder,elder_phone:phone,
         relationship:document.getElementById('family-relationship').value,
-        preferred_hour:hour,interests:document.getElementById('family-interests').value.trim()
+        preferred_hour:hour,interests:document.getElementById('family-interests').value.trim(),
+         share_with_family:document.getElementById('family-share-request').checked
       })});
       state.elder=elder;state.phone=phone;state.relationship=document.getElementById('family-relationship').value;
       state.preferredHour=hour;state.registered=true;move(3);
@@ -139,35 +140,24 @@
     if(action)action.disabled=true;
     try{
       const data=await request('/onboarding');
-      if(data.consent==='CONFIRMED')move(4);
+      if(data.consent==='CONFIRMED')move(8);
       else tell('아직 상담사 확인이 없습니다. 상담사 화면에서 어르신 통화 동의를 직접 확인해 주세요.');
     }catch(e){tell(e.message);}
     finally{if(action)action.disabled=false;}
   }
   async function plans(){
-    page('통화 방식 선택',
-      button('웹전화 체험하기','family-web-trial')+
-      '<div id="family-plans"></div>'+error,false);
-    document.getElementById('family-web-trial').onclick=()=>{
-      if(!document.querySelector('.page').classList.contains('counselor-mode'))document.getElementById('admin-entry')?.click();
-      document.getElementById('pilot-access')?.scrollIntoView({behavior:'smooth',block:'start'});
-    };
+    page('이용권 선택','<div id="family-plans"></div>'+error,false);
     const box=document.getElementById('family-plans');
     try{
       const data=await request('/payment-ready');
       if(state.step!==4)return;
-      if(!data.ready||!data.packages?.length){
-        box.textContent='이용권 구매는 준비 중입니다.';return;
-      }
+      if(!data.ready||!data.packages?.length){box.textContent='이용권 구매는 준비 중입니다.';return;}
       box.className='family-choices';
       for(const item of data.packages){
         if(!['FIVE','TEN'].includes(item.code))continue;
-        const b=document.createElement('button');
-        b.className='family-button outline';b.type='button';
+        const b=document.createElement('button');b.className='family-button outline';b.type='button';
         b.textContent=item.sessions+'회 · '+Number(item.price_krw).toLocaleString('ko-KR')+'원';
-        b.addEventListener('click',()=>{
-          state.packageCode=item.code;state.price=Number(item.price_krw);move(5);
-        });
+        b.onclick=()=>{state.packageCode=item.code;state.price=Number(item.price_krw);move(5);};
         box.append(b);
       }
     }catch(e){if(state.step===4)tell(e.message);}
@@ -239,21 +229,17 @@
         '<select id="family-hour">'+times+'</select>'+
         '<details class="family-more"><summary>대화 주제 (선택)</summary>'+
         '<textarea id="family-interests" maxlength="220" rows="2" placeholder="취미나 관심사">'+esc(state.interests)+'</textarea></details>'+
-        '<label class="family-consent"><input id="family-information-consent" type="checkbox">'+
+        '<label class="family-consent"><input id="family-share-request" type="checkbox">'+
+         '<span>어르신 동의 확인 후 가족에게 일기 공유 요청 (선택)</span></label>'+
+         '<label class="family-consent"><input id="family-information-consent" type="checkbox">'+
         '<span>등록 정보를 상담 준비에 사용하는 데 동의</span></label>'+
         button('등록하기','family-register')+error+'</form>');
       document.getElementById('family-elder-form').onsubmit=e=>{e.preventDefault();submitElder();};
       document.getElementById('family-register').onclick=submitElder;
     }else if(state.step===3){
-      page('통화 동의 확인 대기',
-        '<p class="family-primary-message">등록 완료. 상담사가 어르신에게 AI 통화·녹음·기록 동의를 직접 확인해야 합니다.</p>'+
-        '<p class="family-primary-message">첫 웹통화 테스트에는 자동 재통화 동의가 필요하지 않습니다.</p>'+
-        button('상담사 화면에서 확인','family-to-counselor')+
-        button('확인 후 계속','family-consent-check','outline')+error,false);
-      document.getElementById('family-to-counselor').onclick=()=>{
-        if(!document.querySelector('.page').classList.contains('counselor-mode'))document.getElementById('admin-entry')?.click();
-        document.getElementById('pilot-access')?.scrollIntoView({behavior:'smooth',block:'start'});
-      };
+      page('상담사 확인 대기',
+        '<p class="family-primary-message">어르신 등록은 완료됐습니다. 상담사가 통화·녹음 동의를 직접 확인해야 합니다.</p>'+
+        button('동의 상태 새로고침','family-consent-check')+error,false);
       document.getElementById('family-consent-check').onclick=checkConsent;
     }else if(state.step===4){
       plans();

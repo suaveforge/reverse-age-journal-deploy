@@ -530,3 +530,6 @@ font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decorati
  .page.family-mode .family-form select{font-size:24px;min-height:65px}
  .page.family-mode .family-primary-message{font-size:23px}
 }
+
+.page .ops-consent-status{font-size:clamp(22px,2.5vw,28px);font-weight:850;line-height:1.4;color:#9b4637;margin:18px 0 5px}
+.page .ops-consent-status[hidden]{display:none!important}

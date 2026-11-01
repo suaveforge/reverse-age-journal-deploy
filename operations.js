@@ -408,6 +408,22 @@
     safe(async()=>{await showSubject();switchTab(activeTab);});
   });
   window.addEventListener('raj:pilot-connected',connected);
+  window.addEventListener('raj:pilot-disconnected',()=>{
+    authorized=false;
+    subjects=[];
+    selected='';
+    creating=false;
+    hasOutbox=false;
+    $('pilot-subject-select').replaceChildren();
+    $('ops-appointments').replaceChildren();
+    $('ops-outbox').replaceChildren();
+    $('ops-ticket-history').replaceChildren();
+    $('ops-report-output').value='';
+    $('ops-consent-status').hidden=true;
+    $('ops-confirm-consent').hidden=true;
+    $('ops-consent-dial').hidden=true;
+    switchTab('info');
+  });
   window.addEventListener('raj:diary-saved',()=>safe(async()=>{
     await showSubject();
     switchTab('record');

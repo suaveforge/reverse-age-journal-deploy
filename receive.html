@@ -7,7 +7,7 @@
   <title>어르신 웹전화 | 기쁜사이</title>
   <link rel="stylesheet" href="./receive.css">
   <script defer src="./config.js"></script>
-  <script defer src="./receive.js?v=08"></script>
+  <script defer src="./receive.js?v=09"></script>
 </head>
 <body>
   <main class="receiver">
@@ -16,6 +16,11 @@
       <div class="signal" id="receiver-signal" aria-hidden="true">☎</div>
       <h1 id="receiver-title">연결 준비</h1>
       <p id="receiver-note">잠시만 기다려 주세요.</p>
+      <div id="receiver-consent-panel" hidden>
+        <p>가족이 안부 상담을 신청했습니다. AI가 대화를 진행하며 음성을 처리하고, 녹음과 대화 기록을 만들 수 있습니다. 동의하지 않아도 괜찮습니다.</p>
+        <label style="display:block;margin:20px 0;font-size:1rem"><input id="receiver-consent-check" type="checkbox" style="width:24px;height:24px;vertical-align:middle"> AI 상담·음성 처리·녹음에 동의합니다</label>
+        <button id="receiver-consent-confirm" class="action primary" type="button">동의하고 시작 준비</button>
+      </div>
       <button id="receiver-alert" class="action secondary" type="button">벨소리 켜기</button>
       <div id="receiver-incoming" hidden>
         <button id="receiver-answer" class="action primary" type="button">전화 받기</button>

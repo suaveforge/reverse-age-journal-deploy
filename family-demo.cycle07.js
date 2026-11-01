@@ -26,6 +26,34 @@
   const button=(name,id,kind='primary')=>'<button class="family-button '+kind+'" type="button" id="'+id+'">'+name+'</button>';
   const error='<p id="family-error" class="family-error" role="alert" hidden></p>';
   function tell(message){const x=document.getElementById('family-error');if(x){x.hidden=false;x.textContent=message;}}
+  // Keep the verified family session, but return to the true opening screen.
+  // A plain href reload used to restore the unfinished step from sessionStorage.
+  document.addEventListener('click',event=>{
+    const brand=event.target.closest?.('a.wordmark, a.family-opening-brand');
+    if(!brand)return;
+    event.preventDefault();
+    state.step=0;
+    remember();
+    document.querySelector('[data-view="family"]')?.click();
+    render();
+    window.scrollTo(0,0);
+  });
+  function validationMessage(detail){
+    if(detail==='CALL_HOURS_09_TO_20_KST_ONLY')
+      return '서버에 이전 통화 시간 제한이 남아 있습니다. 선택하신 시간은 저장되지 않았습니다.';
+    const items=Array.isArray(detail)?detail:[];
+    const field=item=>Array.isArray(item?.loc)?item.loc[item.loc.length-1]:'';
+    if(items.some(item=>field(item)==='preferred_hour'||field(item)==='preferred_minute'))
+      return '등록 서버의 통화 시간 설정이 아직 반영되지 않았습니다. 선택하신 시간은 저장되지 않았습니다.';
+    const labels={guardian_name:'보호자 이름',guardian_phone:'보호자 전화번호',
+      elder_name:'어르신 이름',elder_phone:'어르신 전화번호',
+      relationship:'관계',interests:'대화 주제',guest_token:'가족 등록 세션'};
+    const invalid=items.map(field).find(key=>Object.hasOwn(labels,key));
+    if(invalid)return labels[invalid]+' 항목이 서버에서 거절됐습니다. 입력 내용을 확인해 주세요.';
+    if(detail==='CONTACTS_MUST_DIFFER')return '보호자와 어르신의 전화번호를 다르게 입력해 주세요.';
+    if(detail==='NAME_REQUIRED')return '보호자와 어르신의 이름을 입력해 주세요.';
+    return '등록 서버가 요청을 거절했습니다. 선택한 정보는 저장되지 않았습니다. (422)';
+  }
   function page(title,content,back=true){
     host.innerHTML='<div class="family-shell">'+
       (back&&state.step>0&&state.step<4?'<button class="family-back" id="family-back" type="button">이전</button>':'')+
@@ -90,7 +118,7 @@
       if(response.status===404 && path==='/onboarding')
         throw Error('현재 어르신 등록 서비스를 이용할 수 없습니다.');
       if(response.status===404)throw Error('요청한 정보를 찾을 수 없습니다.');
-      if(response.status===422)throw Error('입력한 정보를 확인해 주세요.');
+      if(response.status===422)throw Error(validationMessage(data.detail));
       if(response.status===409)throw Error('현재 상태에서 진행할 수 없습니다.');
       if(response.status===429)throw Error('이용 횟수를 초과했습니다.');
       if(response.status>=500)throw Error('서버 오류가 발생했습니다. 관리자에게 문의해 주세요.');
@@ -308,7 +336,7 @@
   function render(){
     document.querySelector('.page')?.classList.toggle('family-opening-mode',state.step===0);
     if(state.step===0){
-      page('',"<section class=\"family-opening\" aria-label=\"기쁜사이 시작\">\n          <div class=\"family-opening-center\">\n            <div class=\"family-opening-brand\" aria-label=\"기쁜사이\">\n              <svg class=\"family-opening-leaf\" width=\"120\" height=\"118\" viewBox=\"0 0 125 123\" aria-hidden=\"true\">\n                <path d=\"M49 81 C40 35 75 4 111 4 C126 33 110 74 74 101 C58 107 53 96 49 81Z\" fill=\"#69b52d\"/>\n                <path d=\"M8 49 C29 28 61 39 81 67 C93 83 95 102 81 115 C49 123 7 98 8 49Z\" fill=\"#005b3a\"/>\n              </svg>\n              <span class=\"family-opening-brand-name\">기쁜사이\n                <svg class=\"family-opening-smile\" width=\"160\" height=\"24\" viewBox=\"0 0 200 26\" aria-hidden=\"true\"><path d=\"M7 4 Q100 46 193 4\" stroke=\"#60b52b\" stroke-width=\"7\" stroke-linecap=\"round\" fill=\"none\"/></svg>\n              </span>\n            </div>\n            <h1 class=\"family-opening-heading\"><span>오늘의 대화가,</span><span class=\"family-opening-second\">내일의 일기가 됩니다</span></h1>\n            <button class=\"family-button primary\" id=\"family-start\" type=\"button\">시작하기 <span class=\"family-start-arrow\" aria-hidden=\"true\">→</span></button>\n          </div>\n          <svg class=\"family-opening-waves\" viewBox=\"0 0 1600 160\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n            <path d=\"M0 35 C280 -5 435 178 740 151 S1232 76 1600 32 L1600 160 L0 160Z\" fill=\"#e8f3d2\"/>\n            <path d=\"M0 140 C365 5 499 170 791 153 S1321 44 1600 132 L1600 160 L0 160Z\" fill=\"#b4d8a7\" fill-opacity=\".56\"/>\n          </svg>\n        </section>"+error,false);
+      page('',"<section class=\"family-opening\" aria-label=\"기쁜사이 시작\">\n          <div class=\"family-opening-center\">\n            <a class=\"family-opening-brand\" href=\"./\" aria-label=\"기쁜사이 홈으로 이동\">\n              <svg class=\"family-opening-leaf\" width=\"120\" height=\"118\" viewBox=\"0 0 125 123\" aria-hidden=\"true\">\n                <path d=\"M49 81 C40 35 75 4 111 4 C126 33 110 74 74 101 C58 107 53 96 49 81Z\" fill=\"#69b52d\"/>\n                <path d=\"M8 49 C29 28 61 39 81 67 C93 83 95 102 81 115 C49 123 7 98 8 49Z\" fill=\"#005b3a\"/>\n              </svg>\n              <span class=\"family-opening-brand-name\">기쁜사이\n                <svg class=\"family-opening-smile\" width=\"160\" height=\"24\" viewBox=\"0 0 200 26\" aria-hidden=\"true\"><path d=\"M7 4 Q100 46 193 4\" stroke=\"#60b52b\" stroke-width=\"7\" stroke-linecap=\"round\" fill=\"none\"/></svg>\n              </span>\n            </a>\n            <h1 class=\"family-opening-heading\"><span>오늘의 대화가,</span><span class=\"family-opening-second\">내일의 일기가 됩니다</span></h1>\n            <button class=\"family-button primary\" id=\"family-start\" type=\"button\">시작하기 <span class=\"family-start-arrow\" aria-hidden=\"true\">→</span></button>\n          </div>\n          <svg class=\"family-opening-waves\" viewBox=\"0 0 1600 160\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n            <path d=\"M0 35 C280 -5 435 178 740 151 S1232 76 1600 32 L1600 160 L0 160Z\" fill=\"#e8f3d2\"/>\n            <path d=\"M0 140 C365 5 499 170 791 153 S1321 44 1600 132 L1600 160 L0 160Z\" fill=\"#b4d8a7\" fill-opacity=\".56\"/>\n          </svg>\n        </section>"+error,false);
       document.getElementById('family-start').onclick=beginRegistration;
     }else if(state.step===1){
       page('가족 연락처','<form id="family-guardian-form" class="family-form">'+

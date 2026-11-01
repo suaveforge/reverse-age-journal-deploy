@@ -1014,3 +1014,6 @@ body,.page{background:#fdfbf7;color:var(--body)}
  .page.counselor-mode .pilot-call-actions{grid-template-columns:1fr}
  .page.counselor-mode .pilot-secondary-actions button{flex:1;min-width:130px}
 }
+
+/* Product footer metadata belongs in git/deployment logs, not the care interface. */
+.page .release-version{display:none!important}

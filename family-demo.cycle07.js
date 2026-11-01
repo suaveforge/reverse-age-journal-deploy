@@ -9,7 +9,7 @@
   const blank=()=>({
     step:0, family:'',guardianPhone:'',elder:'',phone:'',relationship:'부모님',
     preferredHour:14,interests:'',registered:false,packageCode:'',price:0,
-    credits:0,orderId:'',when:'',booked:false,phoneReady:false,
+    credits:0,orderId:'',when:'',booked:false,phoneReady:false,smsStatus:'',
     guestToken:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','')
   });
   let state=blank();
@@ -124,7 +124,7 @@
     const action=document.getElementById('family-register');action.disabled=true;
     try{
       await checkRegistrationAvailable();
-      await request('/onboarding',{method:'POST',body:JSON.stringify({
+      const registration=await request('/onboarding',{method:'POST',body:JSON.stringify({
         guest_token:state.guestToken,guardian_name:state.family,
         guardian_phone:state.guardianPhone,elder_name:elder,elder_phone:phone,
         relationship:document.getElementById('family-relationship').value,
@@ -132,18 +132,27 @@
          share_with_family:document.getElementById('family-share-request').checked
       })});
       state.elder=elder;state.phone=phone;state.relationship=document.getElementById('family-relationship').value;
-      state.preferredHour=hour;state.registered=true;move(3);
+      state.preferredHour=hour;state.registered=true;state.smsStatus=registration.sms_status||'';move(3);
     }catch(e){tell(e.message);action.disabled=false;}
   }
+  function smsMessage(status){
+    if(status==='SUBMITTED')return '문자 발송 요청을 자동으로 전달했습니다. 어르신이 안내 문자를 열고 동의하시면 다음 단계로 넘어갑니다.';
+    if(status==='UNKNOWN')return '문자 발송 여부를 확인할 수 없습니다. 중복 문자는 보내지 않았습니다.';
+    return '어르신 등록은 완료됐습니다. 문자 발송 중계가 아직 설정되지 않아 안내 문자는 발송되지 않았습니다.';
+  }
   async function checkConsent(){
-    const action=document.getElementById('family-consent-check');
-    if(action)action.disabled=true;
+    if(state.step!==3)return;
     try{
       const data=await request('/onboarding');
-      if(data.consent==='CONFIRMED')move(8);
-      else tell('아직 상담사 확인이 없습니다. 상담사 화면에서 어르신 통화 동의를 직접 확인해 주세요.');
-    }catch(e){tell(e.message);}
-    finally{if(action)action.disabled=false;}
+      if(state.step!==3)return;
+      if(data.sms_status)state.smsStatus=data.sms_status;
+      if(data.consent==='CONFIRMED'){move(8);return;}
+      const p=document.getElementById('family-send-status');
+      if(p)p.textContent=smsMessage(state.smsStatus);
+    }catch{
+      const p=document.getElementById('family-send-status');
+      if(p)p.textContent='등록 상태를 확인할 수 없습니다.';
+    }
   }
   async function plans(){
     page('이용권 선택','<div id="family-plans"></div>'+error,false);
@@ -206,11 +215,10 @@
       '<div id="family-overview" class="family-confirm">기록을 확인하고 있습니다.</div>'+
       '<div id="family-shared-list"></div>'+
       '<div id="family-share-action"></div>'+ 
-      '<div id="family-receiver-tools"></div>'+
+
       button('새로고침','family-dashboard-refresh','outline')+
       '<div id="family-optional-pay"></div>'+error,false);
     document.getElementById('family-dashboard-refresh').onclick=()=>dashboard();
-    receiverTools();
     try{
       const [profile,summary]=await Promise.all([request('/onboarding'),request('/summary')]);
       if(state.step!==8)return;
@@ -329,12 +337,9 @@
       document.getElementById('family-elder-form').onsubmit=e=>{e.preventDefault();submitElder();};
       document.getElementById('family-register').onclick=submitElder;
     }else if(state.step===3){
-      page('상담사 확인 대기',
-        '<p class="family-primary-message">어르신 등록은 완료됐습니다. 상담사가 통화·녹음 동의를 직접 확인해야 합니다.</p>'+
-        button('동의 상태 새로고침','family-consent-check')+
-        '<div id="family-receiver-tools"></div>'+error,false);
-      receiverTools();
-      document.getElementById('family-consent-check').onclick=checkConsent;
+      page('등록 완료',
+        '<p class="family-primary-message" id="family-send-status">'+esc(smsMessage(state.smsStatus))+'</p>'+error,false);
+      checkConsent();
     }else if(state.step===4){
       plans();
     }else if(state.step===5){
@@ -374,6 +379,8 @@
       if(r.consent!=='CONFIRMED'){state.step=3;remember();render();}
     }).catch(()=>{});
   }
+  setInterval(()=>{if(state.step===3&&!document.hidden)checkConsent();},12000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.step===3)checkConsent();});
   window.addEventListener('raj:family-opened',()=>{
     if(!state.registered)return;
     if(state.step===3)checkConsent();

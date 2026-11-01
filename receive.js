@@ -10,7 +10,7 @@
   let durationTimer=0, activityTimer=0, callStartedAt=0, lastVoiceState='', speakerNeedsTap=false;
   let bellContext=null, bellOutput=null, bellTimer=0, bellAllowed=false;
   let sipUA=null,sipRegistered=false,sipSession=null,sipAudio=null,sipStarting=false;
-  let sipMode='LEGACY',incomingSip=null,pendingSip=null,sipAudioWatch=0;
+  let sipMode='LEGACY',incomingSip=null,pendingSip=null,sipAudioWatch=0,sipAnsweredPosted=false;
   let sipBoundPeers=new WeakSet(),sipConfigurationReady=false;
   let notificationAnswerId=new URLSearchParams(location.search).get('action')==='answer'
     ?new URLSearchParams(location.search).get('ring'):null;
@@ -362,6 +362,12 @@
     }
     const ring=result.ring;
     show('receiver-incoming',false);
+    if(ring?.status==='SIP_DIALING'||ring?.status==='SIP_RINGING'){
+      stopBell();phase='idle';
+      show('receiver-alert',false);
+      title('AI 전화 연결 중','잠시 후 전화가 울립니다.');
+      return;
+    }
     if(ring?.status==='RINGING'){
       phase='ringing';ringId=ring.id;
       if(lastRingId!==ring.id)lastRingId=ring.id;
@@ -392,7 +398,7 @@
     }else if(!['WEB_SCHEDULED','WEB_RINGING','WEB_CONNECTING','WEB_CALLING'].includes(result.next_appointment_state)){
       title('예약된 전화가 없어요','보호자에게 예약 상태를 확인해 주세요.');
     }else{
-      title('전화 기다리는 중','예약 시간이 되면 문자로도 전화 알림을 보내드립니다.');
+      title('전화 기다리는 중','예약 시간이 되면 AI 전화가 울립니다.');
     }
   }
   async function check(){
@@ -461,10 +467,12 @@
       // Only the journal's active, consent-authorized ring may be shown.
       const status=await api('status');
       if(pendingSip!==session)return;
-      if(status.consent_required||status.ring?.status!=='RINGING'){
+      const remoteUser=String(session.remote_identity?.uri?.user||'');
+      if(status.consent_required||status.ring?.status!=='SIP_RINGING'||remoteUser!=='7777'){
         terminateSip(session,480);return;
       }
       incomingSip=session;sipSession=session;ringId=status.ring.id;
+      sipAnsweredPosted=false;
       session.on('accepted',()=>sipConnected(session));
       session.on('confirmed',()=>sipConnected(session));
       session.on('ended',()=>sipFinished(session,false));
@@ -484,6 +492,11 @@
     answered=true;callStartedAt=Date.now();sipSession=session;
     syncSipReceivers(session.connection);playSipAudio();
     startCallUI();
+    if(!sipAnsweredPosted){
+      sipAnsweredPosted=true;
+      api('sip/answered',{method:'POST',body:JSON.stringify({id:ringId})})
+        .catch(e=>error('연결 상태 저장 오류: '+messageOf(e)));
+    }
   }
   function sipFinished(session,failed=false,cause=''){
     if(incomingSip!==session)return;
@@ -615,7 +628,8 @@
   async function answer(){
     if(active||phase==='connecting'||!ringId)return;
     if(incomingSip){await answerIncomingSip();return;}
-    if(sipRegistered&&sipMode!=='ONTALK_SHARED'){await answerViaAsterisk();return;}
+    // No reverse outgoing SIP leg: live AI calls arrive from Asterisk.
+    // Only browser WEB fallback may create a new Retell web call on Answer.
     // The very first operation silences the ring. Never restart it in polling.
     phase='connecting';stopBell();
     const button=$('receiver-answer');button.disabled=true;

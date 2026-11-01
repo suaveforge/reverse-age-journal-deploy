@@ -502,3 +502,31 @@ font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decorati
  .page .family-consent{margin:18px 0}
  .page .family-amount{padding:23px}
 }
+
+
+/* Existing CareFriend-style recipient intake: large core fields, optional details folded. */
+.page.family-mode .family-form select,
+.page.family-mode .family-more textarea {
+ width:100%;min-height:72px;margin:0;padding:15px 20px;
+ border:2px solid #b0c6b3;border-radius:15px;background:#fff;color:var(--ink);
+ font:inherit;font-size:clamp(23px,2.7vw,29px);font-weight:750;
+}
+.page.family-mode .family-more{margin:18px 0 9px}
+.page.family-mode .family-more summary{
+ min-height:62px;padding:13px 16px;border:2px solid #c4d8c5;border-radius:14px;
+ cursor:pointer;color:var(--green);font-size:clamp(21px,2.3vw,25px);font-weight:800
+}
+.page.family-mode .family-more textarea{margin-top:12px;min-height:120px;resize:vertical}
+.page.family-mode .family-primary-message{
+ font-size:clamp(23px,2.5vw,28px);font-weight:800;line-height:1.55;word-break:keep-all;
+ margin:0 0 24px;color:#2f4d40
+}
+.page.family-mode .family-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+.page.family-mode .family-choices .family-button{min-height:100px}
+.page.family-mode .family-button:disabled{opacity:.55;cursor:wait}
+@media(max-width:700px){
+ .page.family-mode .family-choices{grid-template-columns:1fr}
+ .page.family-mode .family-choices .family-button{min-height:82px}
+ .page.family-mode .family-form select{font-size:24px;min-height:65px}
+ .page.family-mode .family-primary-message{font-size:23px}
+}

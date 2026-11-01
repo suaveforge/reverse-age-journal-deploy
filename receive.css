@@ -146,3 +146,9 @@ body,.receiver{background:#fdfbf7;color:#003c28}
 /* Final visual QA corrections: avoid one-character wraps and remove implementation metadata from user UI. */
 .receiver .center h1{word-break:keep-all;overflow-wrap:normal;text-wrap:balance}
 @media(max-width:420px){.receiver .center h1{font-size:clamp(32px,8.6vw,39px)}}
+
+/* Brand is a real, accessible home link rather than a decorative label. */
+.receiver header .brand-home{display:inline-flex;align-items:center;min-height:48px;color:#004329;text-decoration:none;text-decoration-thickness:2px;text-underline-offset:5px}
+.receiver header .brand-home strong{color:inherit}
+.receiver header .brand-home:hover{text-decoration:underline}
+.receiver header .brand-home:focus-visible{outline:3px solid #358155;outline-offset:5px;border-radius:4px}

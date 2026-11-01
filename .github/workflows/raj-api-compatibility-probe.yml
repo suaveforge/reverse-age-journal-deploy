@@ -1,0 +1,26 @@
+name: Check live family API compatibility
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/raj-api-compatibility-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Probe existing server123 API without creating customer data
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          HOST=https://api-reverse-age-journal.suaveforge.com:18461
+          echo 'RAJ_LIVE_API_PROBE_START'
+          for route in /api/pilot/healthz /api/pilot/family/payment-ready /api/pilot/family/onboarding; do
+            code=$(curl --connect-timeout 8 --max-time 18 -sS -o /tmp/raj-api-response -w '%{http_code}' -H 'X-RAJ-FAMILY-TOKEN: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' "$HOST$route" || true)
+            printf 'RAJ_API_STATUS %s %s\n' "$route" "$code"
+            head -c 320 /tmp/raj-api-response 2>/dev/null || true
+            echo
+          done
+          echo 'RAJ_LIVE_API_PROBE_FINISHED'

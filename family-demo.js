@@ -8,8 +8,8 @@
   const KEY='raj.family.walkthrough.v2';
   const blank=()=>({
     step:0, family:'',guardianPhone:'',elder:'',phone:'',relationship:'부모님',
-    preferredHour:14,interests:'',registered:false,packageCode:'',price:0,
-    credits:0,orderId:'',when:'',booked:false,phoneReady:false,
+    preferredHour:14,preferredMinute:0,interests:'',registered:false,packageCode:'',price:0,
+    credits:0,orderId:'',when:'',booked:false,phoneReady:false,smsStatus:'',
     guestToken:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','')
   });
   let state=blank();
@@ -115,7 +115,13 @@
   async function submitElder(){
     const elder=document.getElementById('family-elder').value.trim();
     const phone=phoneDigits(document.getElementById('family-phone').value);
-    const hour=Number(document.getElementById('family-hour').value);
+    const selectedTime=document.getElementById('family-hour').value;
+    const matched=/^([0-9]{2}):([0-9]{2})$/.exec(selectedTime);
+    const hour=matched?Number(matched[1]):NaN;
+    const minute=matched?Number(matched[2]):NaN;
+    if(!Number.isInteger(hour)||hour<9||hour>19||!Number.isInteger(minute)||minute<0||minute>59){
+      tell('통화 시간을 오전 9시부터 오후 7시 59분 사이로 지정해 주세요.');return;
+    }
     if(!elder||phone.length<10||phone.length>11){tell('어르신 이름과 전화번호를 확인해 주세요.');return;}
     if(phone===state.guardianPhone){tell('어르신 전화번호를 따로 입력해 주세요.');return;}
     if(!document.getElementById('family-information-consent').checked){
@@ -124,26 +130,35 @@
     const action=document.getElementById('family-register');action.disabled=true;
     try{
       await checkRegistrationAvailable();
-      await request('/onboarding',{method:'POST',body:JSON.stringify({
+      const registration=await request('/onboarding',{method:'POST',body:JSON.stringify({
         guest_token:state.guestToken,guardian_name:state.family,
         guardian_phone:state.guardianPhone,elder_name:elder,elder_phone:phone,
         relationship:document.getElementById('family-relationship').value,
-        preferred_hour:hour,interests:document.getElementById('family-interests').value.trim(),
+        preferred_hour:hour,preferred_minute:minute,interests:document.getElementById('family-interests').value.trim(),
          share_with_family:document.getElementById('family-share-request').checked
       })});
       state.elder=elder;state.phone=phone;state.relationship=document.getElementById('family-relationship').value;
-      state.preferredHour=hour;state.registered=true;move(3);
+      state.preferredHour=hour;state.preferredMinute=minute;state.registered=true;state.smsStatus=registration.sms_status||'';move(3);
     }catch(e){tell(e.message);action.disabled=false;}
   }
+  function smsMessage(status){
+    if(status==='SUBMITTED')return '문자 발송 요청을 자동으로 전달했습니다. 어르신이 안내 문자를 열고 동의하시면 다음 단계로 넘어갑니다.';
+    if(status==='UNKNOWN')return '문자 발송 여부를 확인할 수 없습니다. 중복 문자는 보내지 않았습니다.';
+    return '어르신 등록은 완료됐습니다. 문자 발송 중계가 아직 설정되지 않아 안내 문자는 발송되지 않았습니다.';
+  }
   async function checkConsent(){
-    const action=document.getElementById('family-consent-check');
-    if(action)action.disabled=true;
+    if(state.step!==3)return;
     try{
       const data=await request('/onboarding');
-      if(data.consent==='CONFIRMED')move(8);
-      else tell('아직 상담사 확인이 없습니다. 상담사 화면에서 어르신 통화 동의를 직접 확인해 주세요.');
-    }catch(e){tell(e.message);}
-    finally{if(action)action.disabled=false;}
+      if(state.step!==3)return;
+      if(data.sms_status)state.smsStatus=data.sms_status;
+      if(data.consent==='CONFIRMED'){move(8);return;}
+      const p=document.getElementById('family-send-status');
+      if(p)p.textContent=smsMessage(state.smsStatus);
+    }catch{
+      const p=document.getElementById('family-send-status');
+      if(p)p.textContent='등록 상태를 확인할 수 없습니다.';
+    }
   }
   async function plans(){
     page('이용권 선택','<div id="family-plans"></div>'+error,false);
@@ -162,11 +177,51 @@
       }
     }catch(e){if(state.step===4)tell(e.message);}
   }
+  function receiverTools(){
+    const host=document.getElementById('family-receiver-tools');
+    if(!host)return;
+    const open=document.createElement('button');
+    open.className='family-button primary';open.type='button';
+    open.textContent='어르신 웹전화 연결 링크 만들기';
+    const hint=document.createElement('p');hint.className='family-primary-message';
+    hint.textContent='지정된 어르신 기기에서 링크를 열고 대기해 주세요.';
+    host.replaceChildren(open,hint);
+    open.onclick=async()=>{
+      open.disabled=true;
+      try{
+        const data=await request('/receiver-link',{method:'POST',
+          body:JSON.stringify({guest_token:state.guestToken})});
+        const url=String(data.url||'');
+        if(!/^https:\/\/reverse-age-journal\.suaveforge\.com\/receive\.html#[0-9a-f]{64}$/.test(url))
+          throw Error('연결 링크 형식을 확인할 수 없습니다.');
+        const input=document.createElement('input');input.readOnly=true;
+        input.className='family-receiver-url';input.value=url;
+        input.setAttribute('aria-label','어르신 수신 링크');
+        const copy=document.createElement('button');copy.type='button';
+        copy.className='family-button outline';copy.textContent='링크 복사';
+        copy.onclick=async()=>{
+          try{await navigator.clipboard.writeText(url);copy.textContent='복사 완료';}
+          catch{input.select();document.execCommand('copy');copy.textContent='복사 완료';}
+        };
+        const launch=document.createElement('a');launch.href=url;
+        launch.target='_blank';launch.rel='noopener noreferrer';
+        launch.className='family-button outline';launch.textContent='이 기기에서 수신 열기';
+        const share=document.createElement('button');share.type='button';
+        share.className='family-button outline';share.textContent='어르신께 링크 공유';
+        share.onclick=async()=>{
+          if(navigator.share){try{await navigator.share({title:'기쁜사이 웹전화',url});}catch{}}
+          else copy.click();
+        };
+        host.replaceChildren(hint,input,copy,share,launch);
+      }catch(e){tell(e.message);open.disabled=false;}
+    };
+  }
   async function dashboard(){
     page('가족 기록',
       '<div id="family-overview" class="family-confirm">기록을 확인하고 있습니다.</div>'+
       '<div id="family-shared-list"></div>'+
-      '<div id="family-share-action"></div>'+
+      '<div id="family-share-action"></div>'+ 
+
       button('새로고침','family-dashboard-refresh','outline')+
       '<div id="family-optional-pay"></div>'+error,false);
     document.getElementById('family-dashboard-refresh').onclick=()=>dashboard();
@@ -251,8 +306,9 @@
     }catch(e){tell(e.message);action.disabled=false;}
   }
   function render(){
+    document.querySelector('.page')?.classList.toggle('family-opening-mode',state.step===0);
     if(state.step===0){
-      page('',button('시작하기','family-start')+error,false);
+      page('',"<section class=\"family-opening\" aria-label=\"기쁜사이 시작\">\n          <div class=\"family-opening-center\">\n            <div class=\"family-opening-brand\" aria-label=\"기쁜사이\">\n              <svg class=\"family-opening-leaf\" width=\"120\" height=\"118\" viewBox=\"0 0 125 123\" aria-hidden=\"true\">\n                <path d=\"M49 81 C40 35 75 4 111 4 C126 33 110 74 74 101 C58 107 53 96 49 81Z\" fill=\"#69b52d\"/>\n                <path d=\"M8 49 C29 28 61 39 81 67 C93 83 95 102 81 115 C49 123 7 98 8 49Z\" fill=\"#005b3a\"/>\n              </svg>\n              <span class=\"family-opening-brand-name\">기쁜사이\n                <svg class=\"family-opening-smile\" width=\"160\" height=\"24\" viewBox=\"0 0 200 26\" aria-hidden=\"true\"><path d=\"M7 4 Q100 46 193 4\" stroke=\"#60b52b\" stroke-width=\"7\" stroke-linecap=\"round\" fill=\"none\"/></svg>\n              </span>\n            </div>\n            <h1 class=\"family-opening-heading\"><span>오늘의 대화가,</span><span class=\"family-opening-second\">내일의 일기가 됩니다</span></h1>\n            <button class=\"family-button primary\" id=\"family-start\" type=\"button\">시작하기 <span class=\"family-start-arrow\" aria-hidden=\"true\">→</span></button>\n          </div>\n          <svg class=\"family-opening-waves\" viewBox=\"0 0 1600 160\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n            <path d=\"M0 35 C280 -5 435 178 740 151 S1232 76 1600 32 L1600 160 L0 160Z\" fill=\"#e8f3d2\"/>\n            <path d=\"M0 140 C365 5 499 170 791 153 S1321 44 1600 132 L1600 160 L0 160Z\" fill=\"#b4d8a7\" fill-opacity=\".56\"/>\n          </svg>\n        </section>"+error,false);
       document.getElementById('family-start').onclick=beginRegistration;
     }else if(state.step===1){
       page('가족 연락처','<form id="family-guardian-form" class="family-form">'+
@@ -264,10 +320,7 @@
       document.getElementById('family-guardian-form').onsubmit=e=>{e.preventDefault();submitGuardian();};
       document.getElementById('family-next').onclick=submitGuardian;
     }else if(state.step===2){
-      const times=Array.from({length:11},(_,i)=>{
-        const hour=9+i;return '<option value="'+hour+'" '+(state.preferredHour===hour?'selected':'')+'>'+
-          (hour<12?'오전 '+hour+'시':hour===12?'오후 12시':'오후 '+(hour-12)+'시')+'</option>';
-      }).join('');
+      const preferredTime=String(state.preferredHour).padStart(2,'0')+':'+String(state.preferredMinute||0).padStart(2,'0');
       page('어르신 등록','<form id="family-elder-form" class="family-form">'+
         '<label for="family-elder">어르신 이름</label>'+
         '<input id="family-elder" maxlength="60" autocomplete="off" value="'+esc(state.elder)+'" required>'+
@@ -277,7 +330,7 @@
         '<select id="family-relationship">'+['부모님','조부모님','배우자','기타'].map(v=>
           '<option value="'+v+'" '+(state.relationship===v?'selected':'')+'>'+v+'</option>').join('')+'</select>'+
         '<label for="family-hour">통화 희망 시간</label>'+
-        '<select id="family-hour">'+times+'</select>'+
+        '<input id="family-hour" type="time" min="09:00" max="19:59" step="60" value="'+preferredTime+'" required>'+
         '<details class="family-more"><summary>대화 주제 (선택)</summary>'+
         '<textarea id="family-interests" maxlength="220" rows="2" placeholder="취미나 관심사">'+esc(state.interests)+'</textarea></details>'+
         '<label class="family-consent"><input id="family-share-request" type="checkbox">'+
@@ -288,10 +341,9 @@
       document.getElementById('family-elder-form').onsubmit=e=>{e.preventDefault();submitElder();};
       document.getElementById('family-register').onclick=submitElder;
     }else if(state.step===3){
-      page('상담사 확인 대기',
-        '<p class="family-primary-message">어르신 등록은 완료됐습니다. 상담사가 통화·녹음 동의를 직접 확인해야 합니다.</p>'+
-        button('동의 상태 새로고침','family-consent-check')+error,false);
-      document.getElementById('family-consent-check').onclick=checkConsent;
+      page('등록 완료',
+        '<p class="family-primary-message" id="family-send-status">'+esc(smsMessage(state.smsStatus))+'</p>'+error,false);
+      checkConsent();
     }else if(state.step===4){
       plans();
     }else if(state.step===5){
@@ -331,6 +383,8 @@
       if(r.consent!=='CONFIRMED'){state.step=3;remember();render();}
     }).catch(()=>{});
   }
+  setInterval(()=>{if(state.step===3&&!document.hidden)checkConsent();},12000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.step===3)checkConsent();});
   window.addEventListener('raj:family-opened',()=>{
     if(!state.registered)return;
     if(state.step===3)checkConsent();

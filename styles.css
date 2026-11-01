@@ -549,3 +549,468 @@ font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decorati
 
 /* Confirm only the explicitly verified one-time call consent. */
 .page button#ops-confirm-consent{width:100%;border:0;line-height:1.45;cursor:pointer}
+
+/* Minimal large-link handoff to designated elder web receiver. */
+.family-receiver-url{width:100%;min-height:62px;border:1px solid #9fb8a7;border-radius:14px;padding:14px;font-size:17px;background:#f6f9f4;overflow-wrap:anywhere}
+#family-receiver-tools{display:grid;gap:12px;margin:20px 0}
+#family-receiver-tools .family-button{display:flex;align-items:center;justify-content:center;text-decoration:none;text-align:center;min-height:74px}
+#ops-web-ring-status{font-size:clamp(18px,2.2vw,22px);line-height:1.45;margin:12px 0}
+#ops-web-ring{min-height:86px;font-size:clamp(22px,2.7vw,29px)}
+.pilot-saved-entry input,.pilot-saved-entry textarea{display:block;width:100%;margin:12px 0;padding:13px;border:1px solid #aac0ae;border-radius:10px;font:inherit;color:inherit}
+.pilot-saved-entry .big-button{width:100%;margin:12px 0 16px}
+
+
+/* LOCKED 2026-11-01 brand: approved image retained; copy only changes 안부 -> 일기.
+   Applies only presentation, never changes consent/payment/call functionality. */
+:root{
+  --ink:#003c28;
+  --body:#163e2a;
+  --soft:#5d745f;
+  --green:#055c38;
+  --accent:#edf5e5;
+  --paper:#fdfbf7;
+  --line:#dce8da;
+  background:#fdfbf7;
+}
+body,.page{background:#fdfbf7;color:var(--body)}
+.page .site-header{background:#fdfbf7}
+.page .wordmark strong{color:#06432b;letter-spacing:-.06em}
+.page .admin-entry{
+  color:#06432b;background:transparent;border-color:transparent;
+  text-decoration:underline;text-underline-offset:5px;border-radius:0;
+}
+.page .admin-entry:hover{background:transparent}
+.page .family-title,.page .ops-section-top h3,.page .pilot-section-head h2,
+.page .pilot-management-card h4,.page .pilot-heading h3{color:#003c28}
+.page .family-button,.page .big-button.primary,.page #pilot-verify,
+.page .ops-tabs button.active,.page .ops-dial-action,.page button#ops-confirm-consent{
+  background:#055c38;color:#fff;border-color:#055c38;border-radius:999px;
+  box-shadow:none;
+}
+.page .family-button.outline,.page .big-button.outline,
+.page .ops-large-outline,.page .pilot-text-action,.page .pilot-secondary-actions button,
+.page .ops-tabs button:not(.active),.page .ops-small-button,
+.page .pilot-saved-actions button,.page .ops-profile-details summary{
+  color:#06432b;background:#fffefa;border:2px solid #bfd3bd;
+  border-radius:999px;box-shadow:none;
+}
+.page .family-form input:not([type="checkbox"]),
+.page .family-form select,.page .family-more textarea,
+.page .pilot-management-card input:not([type="checkbox"]),
+.page .pilot-management-card select,.page .pilot-management-card textarea,
+.page #pilot-access,.page .pilot-draft-panel input,.page .pilot-draft-panel textarea{
+  border-color:#b9d1bc;background:#fffefa;color:#003c28;border-radius:16px;
+}
+.page .pilot-login,.page .pilot-management-card,.page .pilot-results,
+.page .pilot-draft-panel,.page .pilot-saved,.page .family-confirm,
+.page .family-amount{border-color:#e2eadf;background:#fffefa;box-shadow:none}
+.page .pilot-login,.page .pilot-management-card,
+.page .pilot-results,.page .pilot-draft-panel,.page .pilot-saved{border-radius:24px}
+.page .pilot-status:not(:empty){background:#e9f4e4;border-color:#b5d1b9}
+.page .pilot-status[data-kind="error"]:not(:empty){background:#fff0ed;border-color:#edc6bf}
+.page .family-form input:focus-visible,.page button:focus-visible,.page a:focus-visible{
+  outline:3px solid #73ac52;outline-offset:4px;
+}
+.page .family-button:hover,.page .big-button.primary:hover{background:#024b2d}
+.page .family-button.outline:hover{background:#f1f7e9}
+
+/* Precisely one principal action on the approved opening page. */
+.page.family-mode.family-opening-mode{min-height:100svh}
+.page.family-mode.family-opening-mode .site-header{
+  position:absolute;z-index:5;top:0;right:0;left:0;
+  width:100%;max-width:none;justify-content:flex-end;
+  padding:16px clamp(17px,3vw,50px);background:transparent;
+}
+.page.family-mode.family-opening-mode .wordmark{display:none}
+.page.family-mode.family-opening-mode .main{padding:0;max-width:none}
+.page.family-mode.family-opening-mode #family-journey{padding:0;margin:0;max-width:none;width:100%}
+.page.family-mode.family-opening-mode .family-shell,
+.page.family-mode.family-opening-mode .family-body{width:100%;max-width:none;margin:0}
+.page .family-opening{
+  position:relative;isolation:isolate;overflow:hidden;
+  min-height:100svh;
+  display:flex;align-items:center;flex-direction:column;justify-content:flex-start;
+  padding:clamp(34px,4vh,58px) 20px clamp(125px,14vh,175px);
+  background:radial-gradient(ellipse at 50% 40%,#fffffe 0%,#fdfbf7 67%,#faf8f0 100%);
+}
+.page .family-opening-center{
+  z-index:1;position:relative;width:100%;max-width:1450px;
+  display:flex;align-items:center;flex-direction:column;
+}
+.page .family-opening-brand{display:flex;justify-content:center;align-items:center;gap:18px}
+.page .family-opening-leaf{width:clamp(78px,9.4vw,150px);height:auto;flex:none}
+.page .family-opening-brand-name{
+  color:#004329;font-weight:900;font-size:clamp(49px,5.1vw,88px);
+  letter-spacing:-.095em;line-height:1.04;white-space:nowrap;
+  display:flex;flex-direction:column;align-items:center;
+}
+.page .family-opening-smile{width:64%;height:28px;margin-top:1px}
+.page .family-opening-heading{
+  margin:clamp(36px,5vh,60px) 0 clamp(42px,7.7vh,86px);
+  display:flex;flex-direction:column;gap:0;align-items:center;
+  text-align:center;line-height:1.27;
+  font-size:clamp(40px,5.55vw,98px);
+  font-weight:900;letter-spacing:-.078em;word-break:keep-all;
+}
+.page .family-opening-heading span{display:block;white-space:nowrap;color:#003c28}
+.page .family-opening-heading .family-opening-second{color:#57a31d}
+.page .family-opening .family-button{
+  width:min(950px,80vw);max-width:none;min-height:clamp(94px,12vw,186px);
+  margin:0;padding:15px 35px;justify-content:center;gap:clamp(18px,2.4vw,45px);
+  border:0;border-radius:999px;background:#055c38;
+  font-size:clamp(35px,4.65vw,84px);font-weight:900;
+  letter-spacing:-.052em;line-height:1.18;text-align:center;
+}
+.page .family-opening .family-button .family-start-arrow{
+  display:inline-block;font-weight:500;font-size:1.12em;line-height:1;
+}
+.page .family-opening-waves{
+  position:absolute;z-index:0;left:0;bottom:0;width:100%;height:clamp(78px,16vh,166px);
+  pointer-events:none;display:block;
+}
+.page.family-mode.family-opening-mode .release-version{display:none}
+@media(max-width:700px){
+  .page.family-mode.family-opening-mode .site-header{padding:9px 13px;min-height:50px}
+  .page.family-mode.family-opening-mode .admin-entry{
+    color:#57705e;padding:7px 10px;min-height:36px;font-size:13px;
+  }
+  .page .family-opening{
+    min-height:100svh;justify-content:center;
+    padding:66px 12px 115px;
+  }
+  .page .family-opening-brand{gap:7px}
+  .page .family-opening-leaf{width:clamp(64px,17vw,94px)}
+  .page .family-opening-brand-name{
+    font-size:clamp(40px,10vw,59px);letter-spacing:-.09em
+  }
+  .page .family-opening-smile{height:18px;margin-top:0}
+  .page .family-opening-heading{
+    font-size:clamp(26px,7.35vw,49px);
+    margin:clamp(40px,8vh,70px) 0 clamp(38px,8vh,68px);
+    letter-spacing:-.078em;line-height:1.37;
+  }
+  .page .family-opening .family-button{
+    width:min(100%,calc(100vw - 44px));min-height:96px;
+    padding:14px 20px;font-size:clamp(33px,9vw,45px)
+  }
+  .page .family-opening-waves{height:95px}
+  .page:not(.family-opening-mode) .family-button{border-radius:999px}
+  .page .ops-tabs button{border-radius:999px}
+}
+@media(prefers-reduced-motion:reduce){
+  .page .family-opening .family-button{transition:none}
+}
+
+
+/* Approved brand — full workflow refinement, 2026-11-01.
+   Do not change the LOCKED opening, consent controls or call semantics.
+   All secondary screens use the same plain, generous composition. */
+.page:not(.family-opening-mode) .site-header{
+  max-width:1080px;margin-inline:auto;padding:clamp(19px,3vw,32px) clamp(18px,4vw,40px) 8px;
+  min-height:72px;align-items:center;border:0;
+}
+.page:not(.family-opening-mode) .site-header .wordmark strong{
+  color:#06432b;font-weight:900;font-size:clamp(30px,3.5vw,39px);letter-spacing:-.08em;
+}
+.page:not(.family-opening-mode) .main{
+  max-width:1080px;padding:0 clamp(18px,4vw,40px) 54px;
+}
+.page:not(.family-opening-mode) .release-version{
+  color:#a0aa9c;font-size:11px;opacity:.55;padding:6px 20px 15px;
+}
+.page .admin-entry{
+  font-weight:750;min-height:48px;font-size:clamp(15px,1.8vw,18px);
+  padding:9px 11px!important;text-decoration:none;border-bottom:1px solid #9bad97!important;
+  border-radius:0!important;white-space:nowrap;
+}
+.page .family-journey{
+  width:100%;max-width:820px;margin:0 auto;
+  padding:clamp(35px,6vw,68px) 0 80px;
+}
+.page .family-shell,.page .family-body{width:100%;max-width:820px}
+.page .family-title{
+  margin:0 0 clamp(27px,4vw,44px);
+  max-width:800px;color:#003c28;font-size:clamp(38px,5vw,62px);
+  line-height:1.29;font-weight:900;letter-spacing:-.075em;
+}
+.page .family-form{display:block;width:100%;margin:0}
+.page .family-form label:not(.family-consent){
+  display:block;margin:20px 0 10px;font-size:clamp(21px,2.35vw,26px);
+  line-height:1.4;color:#0c3927;font-weight:800;
+}
+.page .family-form input:not([type="checkbox"]),
+.page.family-mode .family-form select,.page.family-mode .family-more textarea{
+  width:100%;min-width:0;min-height:72px;
+  padding:16px 21px;border:2px solid #c3d5c2;border-radius:16px;
+  background:#fffefa;color:#0d3c28;
+  font-size:clamp(22px,2.5vw,27px);font-weight:650;box-shadow:none;
+}
+.page .family-form input:focus-visible,.page .family-form select:focus-visible,
+.page .family-form textarea:focus-visible{outline:3px solid #87b878;outline-offset:2px}
+.page .family-consent{
+  align-items:flex-start;gap:15px;margin:21px 0;
+  padding:0;font-size:clamp(19px,2.1vw,23px);
+  color:#183c2d;line-height:1.45;font-weight:700;
+}
+.page .family-consent input{width:30px;height:30px;margin:2px 0 0;flex:none}
+.page .family-more{margin:16px 0 7px}
+.page.family-mode .family-more summary{
+  border:0;background:transparent;border-radius:0;
+  text-decoration:underline;text-underline-offset:5px;
+  color:#315e42;padding:8px 0;font-size:clamp(19px,2vw,23px);
+  min-height:44px;
+}
+.page .family-back{
+  display:inline-flex;align-items:center;justify-content:flex-start;
+  padding:7px 0 11px;margin:0 0 23px;
+  font-size:clamp(19px,2vw,22px);font-weight:750;color:#55705b;
+  text-decoration:underline;text-underline-offset:5px;min-height:44px;
+}
+.page .family-button{
+  justify-content:center!important;text-align:center!important;
+  min-height:clamp(82px,8.5vw,103px);margin:25px 0 0;
+  border-radius:999px!important;padding:18px 26px;
+  box-shadow:none;font-size:clamp(25px,2.9vw,32px);font-weight:900;line-height:1.25;
+}
+.page .family-button.outline{
+  border:2px solid #b9d1bd;color:#075437;background:#fffefa;
+}
+.page .family-choices{gap:14px}
+.page .family-choices .family-button{
+  min-height:clamp(95px,10vw,128px);margin:0;
+}
+.page .family-primary-message{
+  color:#254833;max-width:800px;font-size:clamp(21px,2.35vw,25px);
+  line-height:1.55;font-weight:700;margin:0 0 21px;
+}
+.page .family-confirm{
+  border:0;border-top:2px solid #bdd6c0;border-bottom:2px solid #bdd6c0;
+  border-radius:0;background:transparent;padding:25px 0;gap:9px;margin:0 0 23px;
+}
+.page .family-amount{
+  border:0;border-radius:0;background:transparent;
+  padding:0 0 23px;margin:0 0 24px;border-bottom:2px solid #d8e5d6;
+  font-size:clamp(47px,6vw,71px);color:#054c31;font-weight:900;
+}
+.page .family-no-record{
+  background:transparent;color:#104a30;border:0;border-radius:0;
+  padding:25px 0;font-size:clamp(24px,3vw,32px);
+}
+.page .family-summary-title{
+  color:#06432b;font-weight:900;font-size:clamp(27px,3vw,36px);
+}
+.page .family-shared-summary{
+  border-bottom:1px solid #d3e0d1;padding:26px 0;
+}
+.page .family-error:not([hidden]){
+  border:0;border-left:4px solid #9d433e;border-radius:0;
+  padding:14px 19px;font-size:clamp(19px,2vw,23px);
+}
+.page .family-journey .family-button:disabled{opacity:.5}
+
+/* Counselor: a single clear hierarchy, no piled-up cards or badges. */
+.page.counselor-mode .pilot-section{
+  width:100%;max-width:1000px;margin:0 auto;
+  padding:clamp(22px,4vw,45px) 0 70px;
+}
+.page.counselor-mode .pilot-section-head{
+  margin:0 0 26px;
+}
+.page.counselor-mode .pilot-section-head h2{
+  color:#06432b;font-size:clamp(37px,4.2vw,51px);font-weight:900;
+}
+.page.counselor-mode .pilot-login{
+  max-width:850px;margin:0 auto;padding:clamp(22px,4vw,40px);
+  border:1px solid #dfebdb;border-radius:21px;background:#fffefa;
+}
+.page.counselor-mode .pilot-login>label{
+  margin:0 0 16px;font-size:clamp(23px,2.4vw,29px);color:#06432b;
+}
+.page.counselor-mode .pilot-access-row{
+  grid-template-columns:minmax(0,1fr) minmax(170px,220px);gap:14px;align-items:end;
+}
+.page.counselor-mode #pilot-access,.page.counselor-mode #pilot-verify{
+  min-height:78px;font-size:clamp(22px,2.2vw,28px);border-radius:16px;
+}
+.page.counselor-mode #pilot-verify{border-radius:999px}
+.page.counselor-mode .ops-section-top{
+  margin-bottom:23px;align-items:center;gap:18px;
+}
+.page.counselor-mode .ops-section-top h3{
+  margin:0;color:#003c28;font-size:clamp(35px,4.2vw,49px);font-weight:900;
+}
+.page.counselor-mode .ops-large-outline{
+  min-height:66px;min-width:0;padding:13px 24px;
+  background:#fffefa;color:#075437;border:2px solid #bdd0bf;
+  border-radius:999px;font-size:clamp(21px,2.2vw,27px);font-weight:850;
+}
+.page.counselor-mode .ops-tabs{gap:10px;margin:0 0 24px}
+.page.counselor-mode .ops-tabs button{
+  border:2px solid #c9d9c8;background:transparent;color:#20513a;
+  border-radius:999px;min-height:70px;font-size:clamp(20px,2.2vw,25px);font-weight:850;
+}
+.page.counselor-mode .ops-tabs button.active{
+  background:#055c38;border-color:#055c38;color:white;
+}
+.page.counselor-mode .pilot-management-card{
+  margin:0 0 18px;border:1px solid #e2e9dc;
+  background:#fffefa;border-radius:21px;
+  box-shadow:none;padding:clamp(20px,3vw,32px);
+}
+.page.counselor-mode .ops-main-card{
+  background:#fffefa!important;border:1px solid #e2e9dc!important;
+}
+.page.counselor-mode .pilot-management-card h4{
+  color:#06432b;font-size:clamp(27px,2.9vw,35px);
+  font-weight:900;margin:0 0 21px;
+}
+.page.counselor-mode .pilot-management-card input:not([type=checkbox]),
+.page.counselor-mode .pilot-management-card select,
+.page.counselor-mode .pilot-management-card textarea,
+.page.counselor-mode #pilot-subject-select{
+  min-width:0;max-width:100%;min-height:71px;
+  border:2px solid #bfd2bf!important;background:#fffefa!important;
+  border-radius:16px!important;color:#063e29;
+  padding:14px 18px!important;font-size:clamp(21px,2.3vw,27px);
+  font-weight:650;box-shadow:none;
+}
+.page.counselor-mode .pilot-big-label,.page.counselor-mode .pilot-form-grid label,
+.page.counselor-mode .ops-profile-grid label,.page.counselor-mode .ops-rule-grid label{
+  font-size:clamp(21px,2.2vw,25px);font-weight:800;color:#16442e;
+}
+.page.counselor-mode .ops-credit-row{
+  padding:20px 0 0;gap:14px;border-top:1px solid #e2e9df;margin-top:22px;
+}
+.page.counselor-mode #ops-credit{
+  font-size:clamp(29px,3.6vw,44px);font-weight:900;color:#06432b;
+}
+.page.counselor-mode .pilot-text-action,.page.counselor-mode .pilot-secondary-actions button,
+.page.counselor-mode .ops-small-button{
+  border:2px solid #c3d6c1;border-radius:999px;
+  color:#075437;background:#fffefa;
+  min-height:57px;padding:12px 20px;
+  font-size:clamp(18px,2vw,23px);font-weight:800;box-shadow:none;
+}
+.page.counselor-mode .ops-entry{
+  border-top:1px solid #e0e9dc;gap:15px;padding:17px 0;
+}
+.page.counselor-mode .ops-entry-date,.page.counselor-mode .ops-entry-state,
+.page.counselor-mode .ops-entry strong,.page.counselor-mode .ops-entry small{
+  font-size:clamp(18px,2vw,22px);font-weight:650;
+}
+.page.counselor-mode .ops-entry-state{color:#54705b}
+.page.counselor-mode .ops-profile-details{
+  margin-top:15px;
+}
+.page.counselor-mode .ops-profile-details summary{
+  border:1px solid #b8d2b8;color:#06432b;
+  background:#fffefa;border-radius:999px;
+  font-size:clamp(21px,2.3vw,27px);font-weight:800;
+}
+.page.counselor-mode .ops-profile-details .ops-profile-card{
+  border:0;border-top:1px solid #dce6d8;
+  border-radius:0;background:transparent;
+  margin:19px 0 0;padding:24px 0 0!important;
+}
+.page.counselor-mode .ops-consent-grid label{
+  border:0;border-bottom:1px solid #e2e9df;border-radius:0;
+  min-height:70px;background:transparent;padding:10px 0;
+  font-size:clamp(20px,2.25vw,24px);font-weight:750;
+}
+.page.counselor-mode .ops-consent-grid input{accent-color:#055c38}
+.page.counselor-mode .ops-full-button,.page.counselor-mode .big-button.primary,
+.page.counselor-mode #pilot-start,.page.counselor-mode #pilot-save{
+  border-radius:999px;font-size:clamp(23px,2.8vw,30px);
+  font-weight:900;min-height:82px;justify-content:center;
+}
+.page.counselor-mode .pilot-call-actions{
+  gap:12px;margin:23px 0 12px;
+}
+.page.counselor-mode .pilot-call-actions .danger{
+  border-radius:999px;border:2px solid #ae6861;background:#fff6f3;
+  color:#9a3d35;justify-content:center;
+}
+.page.counselor-mode .pilot-warning:not(.pilot-cost-warning):not([hidden]){
+  display:block;color:#5d745f;font-size:clamp(17px,1.85vw,21px);line-height:1.5
+}
+.page.counselor-mode .pilot-results,
+.page.counselor-mode .pilot-draft-panel,.page.counselor-mode .pilot-saved{
+  background:#fffefa;border:1px solid #e2e9dc;border-radius:21px;
+  padding:clamp(20px,3vw,32px);box-shadow:none;
+}
+.page.counselor-mode .pilot-mini-stats{gap:10px}
+.page.counselor-mode .pilot-mini-stats span{
+  color:#5b725c;background:transparent;border:0;
+  padding:0;font-size:clamp(16px,1.8vw,20px);font-weight:700;
+}
+.page.counselor-mode .pilot-mini-stats span+span:before{
+  content:"·";margin-right:10px;color:#a5b8a0
+}
+.page.counselor-mode .pilot-transcript{
+  background:#fdfdf9;border:0;border-top:1px solid #dce6d8;
+  border-bottom:1px solid #dce6d8;border-radius:0;padding:10px 0;
+}
+.page.counselor-mode .pilot-turn{padding:21px 3px}
+.page.counselor-mode .pilot-turn strong{
+  font-size:clamp(19px,2vw,23px);color:#084e31;
+}
+.page.counselor-mode .pilot-turn p{
+  font-size:clamp(20px,2.2vw,25px);line-height:1.6;
+}
+.page.counselor-mode .pilot-draft-panel input,.page.counselor-mode .pilot-draft-panel textarea,
+.page.counselor-mode .pilot-saved-entry input,.page.counselor-mode .pilot-saved-entry textarea{
+  border-radius:16px;background:#fffefa;border:2px solid #c0d4bd;
+  font-size:clamp(20px,2.2vw,25px);
+}
+.page.counselor-mode #ops-web-ring-status{
+  color:#4d6850;font-weight:700;font-size:clamp(19px,2.2vw,24px);
+  margin:15px 0 7px;
+}
+.page.counselor-mode #ops-consent-status{
+  color:#9c4e32;font-size:clamp(20px,2.2vw,25px);line-height:1.5;
+  margin:12px 0 10px;
+}
+.page.counselor-mode #ops-consent-status[data-kind="confirmed"]{color:#236347}
+.page.counselor-mode #ops-consent-status[hidden]{display:none}
+.page.counselor-mode #ops-web-ring-refresh{display:none!important}
+.page.counselor-mode [data-ops-panel="tickets"]>h4{display:none}
+.page.counselor-mode #pilot-call-panel .pilot-checkline{
+  font-size:clamp(20px,2.1vw,25px);
+}
+.page.counselor-mode #pilot-call-id{display:none}
+.page.counselor-mode .pilot-call-actions [aria-hidden="true"],
+.page.counselor-mode #ops-save-profile [aria-hidden="true"]{display:none}
+.page.counselor-mode .pilot-cost-warning{
+  font-size:clamp(17px,1.85vw,21px);color:#6b594d;
+  margin:8px 0 18px;
+}
+@media(max-width:720px){
+ .page:not(.family-opening-mode) .site-header{padding:18px 16px 6px}
+ .page:not(.family-opening-mode) .main{padding:0 17px 35px}
+ .page .family-journey{padding:33px 0 54px}
+ .page .family-title{font-size:clamp(36px,9.3vw,48px);margin-bottom:29px}
+ .page .family-form label:not(.family-consent){margin:19px 0 8px}
+ .page .family-button{min-height:88px;font-size:clamp(25px,6.8vw,30px)}
+ .page .family-choices{grid-template-columns:1fr;gap:12px}
+ .page .family-choices .family-button{min-height:82px}
+ .page .family-primary-message{font-size:clamp(20px,5.35vw,24px)}
+ .page.counselor-mode .pilot-section{padding:18px 0 52px}
+ .page.counselor-mode .pilot-login{padding:22px 19px}
+ .page.counselor-mode .pilot-access-row{grid-template-columns:1fr}
+ .page.counselor-mode .ops-section-top h3{font-size:clamp(33px,8vw,43px)}
+ .page.counselor-mode .ops-large-outline{min-height:60px;padding:12px 18px;font-size:19px}
+ .page.counselor-mode .ops-tabs{
+   grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 20px;
+ }
+ .page.counselor-mode .ops-tabs button{
+   min-height:66px;font-size:clamp(20px,5vw,24px);padding:11px 5px;
+ }
+ .page.counselor-mode .pilot-management-card{padding:21px 17px}
+ .page.counselor-mode .ops-credit-row{align-items:flex-start}
+ .page.counselor-mode .ops-credit-row strong{font-size:32px}
+ .page.counselor-mode .ops-profile-details .ops-profile-card{padding:18px 0!important}
+ .page.counselor-mode .ops-profile-grid,.page.counselor-mode .ops-rule-grid,
+ .page.counselor-mode .ops-consent-grid{grid-template-columns:1fr;gap:10px}
+ .page.counselor-mode .pilot-call-actions{grid-template-columns:1fr}
+ .page.counselor-mode .pilot-secondary-actions button{flex:1;min-width:130px}
+}

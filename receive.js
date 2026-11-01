@@ -9,6 +9,7 @@
   let lastRingId='', phase='idle', agentSpeaking=false, micMuted=false;
   let durationTimer=0, activityTimer=0, callStartedAt=0, lastVoiceState='', speakerNeedsTap=false;
   let bellContext=null, bellOutput=null, bellTimer=0, bellAllowed=false;
+  let sipUA=null,sipRegistered=false,sipSession=null,sipAudio=null,sipStarting=false;
   let homeReturnTimer=0;
   function returnHomeAfterCall(){
     if(homeReturnTimer)return;
@@ -316,8 +317,105 @@
     finalize(false);
     returnHomeAfterCall();
   }
+  async function initializeAsteriskSip(){
+    if(sipUA||sipStarting||!window.JsSIP)return;
+    sipStarting=true;
+    try{
+      const result=await fetch(BASE+'/api/pilot/receiver/sip/setup',{
+        method:'POST',headers:{'X-RAJ-RECEIVER-TOKEN':token}
+      });
+      if(!result.ok)return;
+      const cfg=await result.json();
+      if(!cfg.ready||!cfg.sip_uri||!cfg.sip_secret)return;
+      const socket=new window.JsSIP.WebSocketInterface(cfg.websocket_url);
+      sipUA=new window.JsSIP.UA({
+        sockets:[socket],uri:cfg.sip_uri,password:cfg.sip_secret,
+        register:true,register_expires:120,session_timers:false,
+        display_name:'기쁜사이'
+      });
+      sipUA.on('registered',()=>{sipRegistered=true;});
+      sipUA.on('unregistered',()=>{sipRegistered=false;});
+      sipUA.on('registrationFailed',()=>{sipRegistered=false;});
+      sipUA.on('disconnected',()=>{sipRegistered=false;});
+      sipUA.start();
+    }catch(_){ /* Retell WebRTC remains the safe fallback until provisioned. */ }
+    finally{sipStarting=false;}
+  }
+  async function answerViaAsterisk(){
+    if(!sipUA||!sipRegistered||active||!ringId)return false;
+    phase='connecting';stopBell();
+    const button=$('receiver-answer');
+    button.disabled=true;
+    show('receiver-incoming',false);
+    title('통화 연결 중','AI 상담사에게 연결하고 있습니다.');
+    try{
+      // Request microphone under a real user gesture before asynchronous APIs.
+      const mic=navigator.mediaDevices.getUserMedia({audio:true});
+      const response=await fetch(BASE+'/api/pilot/receiver/sip/accept',{
+        method:'POST',
+        headers:{'X-RAJ-RECEIVER-TOKEN':token,'Content-Type':'application/json'},
+        body:JSON.stringify({id:ringId})
+      });
+      if(!response.ok){
+        await mic.then(x=>x.getTracks().forEach(t=>t.stop())).catch(()=>{});
+        throw Error('SIP_CALL_REGISTRATION_FAILED_'+response.status);
+      }
+      const info=await response.json();
+      const userMedia=await mic;
+      userMedia.getTracks().forEach(t=>t.stop());
+      sipAudio=new Audio();
+      sipAudio.autoplay=true;
+      sipAudio.playsInline=true;
+      sipAudio.style.display='none';
+      document.body.appendChild(sipAudio);
+      const session=sipUA.call(info.dial_uri,{
+        mediaConstraints:{audio:true,video:false},
+        pcConfig:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]},
+        extraHeaders:['X-RAJ-Call-ID: '+info.call_id]
+      });
+      sipSession=session;
+      client={
+        stopCall:async()=>session.terminate(),
+        mute:()=>session.mute({audio:true}),
+        unmute:()=>session.unmute({audio:true}),
+        startAudioPlayback:async()=>sipAudio.play()
+      };
+      const attach=connection=>{
+        if(!connection||!connection.addEventListener)return;
+        connection.addEventListener('track',evt=>{
+          const stream=evt.streams?.[0]||new MediaStream([evt.track]);
+          sipAudio.srcObject=stream;
+          sipAudio.play().catch(()=>{show('receiver-sound',true);});
+        });
+      };
+      attach(session.connection);
+      session.on('peerconnection',e=>attach(e.peerconnection));
+      session.on('confirmed',()=>{if(sipSession===session)startCallUI();});
+      session.on('accepted',()=>{if(sipSession===session)startCallUI();});
+      session.on('ended',()=>{if(sipSession===session){
+        sipSession=null;sipAudio?.remove();sipAudio=null;endClientCall();
+      }});
+      session.on('failed',e=>{
+        if(sipSession===session){
+          sipSession=null;sipAudio?.remove();sipAudio=null;
+          stopBell();stopCallUI();active=false;phase='idle';client=null;
+          title('통화 연결 실패','연결할 수 없습니다.');
+          error(String(e?.cause||'SIP 연결 실패'));
+        }
+      });
+      answered=true;
+      return true;
+    }catch(e){
+      stopBell();stopCallUI();phase='idle';active=false;client=null;
+      title('통화 연결 실패','잠시 후 다시 시도해 주세요.');
+      error(messageOf(e));
+      return true;
+    }finally{button.disabled=false;}
+  }
+
   async function answer(){
     if(active||phase==='connecting'||!ringId)return;
+    if(sipRegistered){await answerViaAsterisk();return;}
     // The very first operation silences the ring. Never restart it in polling.
     phase='connecting';stopBell();
     const button=$('receiver-answer');button.disabled=true;
@@ -409,6 +507,7 @@
     const unlock=unlockBell().catch(()=>false);
     try{
       await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
+      initializeAsteriskSip().catch(()=>{});
       await registerBackgroundReceiver(await notificationPermission).catch(()=>false);
       const allowed=await unlock;
       show('receiver-consent-panel',false);
@@ -433,6 +532,7 @@
   }
   sessionStorage.setItem('raj.receiver.token',token);
   setupExistingPush();
+  initializeAsteriskSip();
   sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
   sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
   check();

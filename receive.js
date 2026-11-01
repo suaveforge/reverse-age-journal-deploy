@@ -204,6 +204,10 @@
     }else if(['CONNECTING','IN_CALL','ENDING'].includes(ring?.status)){
       show('receiver-alert',false);
       title('통화 상태 확인 중','기록을 정리하고 있습니다.');
+    }else if(result.next_appointment_state==='NEEDS_PAYMENT'){
+      title('다음 전화 예약 대기','이용 회기가 없어 아직 전화가 예약되지 않았습니다.');
+    }else if(!['WEB_SCHEDULED','WEB_RINGING','WEB_CONNECTING','WEB_CALLING'].includes(result.next_appointment_state)){
+      title('예약된 전화가 없어요','보호자에게 예약 상태를 확인해 주세요.');
     }else{
       title('전화 기다리는 중','예약 시간이 되면 문자로도 전화 알림을 보내드립니다.');
     }

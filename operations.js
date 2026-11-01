@@ -12,6 +12,9 @@
   let hasOutbox=false;
   let noticeTimer=null;
   let previousRecurringConsent=false;
+  let previousParticipantConsent=false;
+  let previousSharingConsent=false;
+  let guardianSharingRequested=false;
   const ticketLabels={TRIAL:'체험 충전',PURCHASE:'구매',COMPLETED_CALL:'통화 사용'};
   function switchTab(tab){
     if(!subjects.length && tab!=='info')tab='info';
@@ -66,7 +69,12 @@
     $('ops-consent-status').hidden=false;
     $('ops-consent-status').textContent=person.participant_consent ? '통화 동의 확인됨' : '어르신 통화 동의 확인 필요';
     previousRecurringConsent=Boolean(person.recurring_consent);
-    $('ops-confirm-consent').hidden=Boolean(person.participant_consent);
+    previousParticipantConsent=Boolean(person.participant_consent);
+    previousSharingConsent=Boolean(person.family_notifications_consent);
+    guardianSharingRequested=Boolean(person.guardian_sharing_requested);
+    const pendingShare=guardianSharingRequested&&!previousSharingConsent;
+    $('ops-confirm-consent').hidden=previousParticipantConsent&&!pendingShare;
+    $('ops-confirm-consent').textContent=previousParticipantConsent?'가족 공유 동의 확인':'통화 동의 확인';
     const dial=$('ops-consent-dial');
     const phone=String(person.phone||'').trim();
     const pending=!person.participant_consent;
@@ -91,8 +99,12 @@
     const participant=$('ops-edit-consent').checked;
     const repeat=$('ops-edit-recurring').checked;
     if(repeat&&!participant){feedback('통화 동의가 필요합니다.',true);return;}
-    if(participant&&repeat&&$('ops-consent-status').textContent!=='통화 동의 확인됨' &&
-       !confirm('어르신에게 직접 AI 통화·녹음·기록 및 정기 전화 동의를 확인하셨습니까?'))return;
+    if(participant&&!previousParticipantConsent&&
+       !confirm('어르신에게 직접 AI 통화·녹음·기록 동의를 확인하셨습니까?'))return;
+    if(repeat&&!previousRecurringConsent&&
+       !confirm('어르신에게 별도로 정기 전화 및 재통화 동의를 확인하셨습니까?'))return;
+    if($('ops-edit-family-consent').checked&&!previousSharingConsent&&
+       !confirm('어르신이 가족에게 일기를 공유하는 데 동의하셨습니까?'))return;
     if(!repeat&&previousRecurringConsent&&!confirm('자동 재통화를 끄면 예정된 자동 예약이 취소됩니다. 저장할까요?'))return;
     $('ops-save-profile').disabled=true;
     try{
@@ -114,9 +126,24 @@
   }
   async function confirmConsent(){
     if(!selected){feedback('어르신을 먼저 선택해 주세요.',true);return;}
-    if(!confirm('어르신에게 직접 AI 통화·녹음·기록 동의를 확인하셨습니까? 자동 재통화는 별도 동의이며 여기서 켜지지 않습니다.'))return;
-    $('ops-edit-consent').checked=true;
-    await saveProfile();
+    if(!previousParticipantConsent&&
+       !confirm('어르신의 AI 통화·녹음·기록 동의를 직접 확인하셨습니까?'))return;
+    let share=false;
+    if(guardianSharingRequested&&!previousSharingConsent){
+      share=confirm('어르신이 상담 일기를 보호자에게 공유하는 데에도 동의하셨습니까?');
+    }
+    $('ops-confirm-consent').disabled=true;
+    try{
+      const result=await request('/subjects/'+encodeURIComponent(selected)+'/confirm-consent',{
+        method:'POST',body:JSON.stringify({share_with_family:share})
+      });
+      await loadSubjects();
+      feedback(result.share_approved?'통화·가족 공유 승인 완료':'통화 동의 확인 완료');
+      if(result.consent_confirmed&&result.balance>0){
+        switchTab('call');
+        $('pilot-consent').scrollIntoView({behavior:'smooth',block:'center'});
+      }
+    }finally{$('ops-confirm-consent').disabled=false;}
   }
   const request=(path,options)=>window.RAJ_OPERATIONS_REQUEST(path,options);
   function feedback(message,bad=false){
@@ -173,7 +200,7 @@
     text('ops-script','어르신을 선택하면 대화 안내가 나타납니다.');
     text('ops-previous','');
     $('ops-appointments').replaceChildren();
-    if(!selected){$('ops-consent-status').hidden=true;$('ops-consent-dial').hidden=true;return;}
+    if(!selected){$('ops-consent-status').hidden=true;$('ops-consent-dial').hidden=true;$('ops-confirm-consent').hidden=true;window.RAJ_CONSENT_APPROVED=false;return;}
     const info=await request('/subjects/'+encodeURIComponent(selected));
     showProfile(info);
     const trials=(info.credit_history||[]).filter(x=>x.kind==='TRIAL')
@@ -181,6 +208,7 @@
     $('ops-trial').hidden=trials>=3;
     text('ops-credit','잔여 회기 '+info.balance+'회');
     window.RAJ_CREDITS_AVAILABLE=info.balance>0;
+    window.RAJ_CONSENT_APPROVED=Boolean(info.subject?.participant_consent);
     window.RAJ_REFRESH_CALL_BUTTON?.();
     const script=info.script||{};
     text('ops-stage',script.stage==='RETURN'?'재통화 안내':'첫 통화 안내');

@@ -25,3 +25,20 @@ footer{font-size:14px;line-height:1.5;color:#718577;text-align:center}.error{col
 #receiver-connected .secondary{font-size:clamp(21px,5vw,25px)}
 @media(max-height:700px){.receiver{padding-top:12px;padding-bottom:12px}.signal{height:78px;line-height:78px;font-size:70px}h1{margin:6px 0}.voice-party{min-height:132px;padding:12px 8px}#receiver-connected .action{min-height:60px}}
 @media(prefers-reduced-motion:reduce){.voice-party,.voice-bars i{transition:none}}
+
+
+/* Shared locked brand presentation with the family and counselor pages. */
+:root{font-family:"Noto Sans KR",system-ui,-apple-system,sans-serif;color:#003c28;background:#fdfbf7}
+body{background:#fdfbf7;color:#003c28}
+.receiver{background:#fdfbf7}
+.receiver header strong{color:#004329;font-weight:900;letter-spacing:-.06em}
+.receiver header small,.receiver .center>p{color:#617963}
+.receiver .action{border-radius:999px;font-weight:850}
+.receiver .action.primary{background:#055c38;border-color:#055c38;color:white}
+.receiver .action.secondary{background:#fffefa;border:2px solid #bfd3bd;color:#06432b}
+.receiver .action.danger{border-radius:999px}
+.receiver .center h1{color:#003c28;font-weight:900;letter-spacing:-.065em}
+.receiver input[type=checkbox]{accent-color:#055c38}
+.receiver .voice-panel,.receiver .voice-party{border-radius:22px}
+.receiver .voice-party{background:#fffefa}
+.receiver footer{color:#6c826d}

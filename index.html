@@ -13,12 +13,12 @@
   <meta name="theme-color" content="#f6f6f1">
   <meta name="description" content="전화로 나눈 하루를 가족의 일기로 남깁니다.">
   <title>Reverse Age Journal | 기쁜사이</title>
-  <link rel="stylesheet" href="./styles.cycle05.css">
+  <link rel="stylesheet" href="./styles.cycle07.css">
   <script defer src="./config.js?v=cycle-20261101-05"></script>
-  <script defer src="./app.cycle05.js"></script>
-  <script defer src="./pilot.cycle05.js"></script>
-  <script defer src="./operations.cycle05.js"></script>
-  <script defer src="./family-demo.cycle05.js"></script>
+  <script defer src="./app.cycle07.js"></script>
+  <script defer src="./pilot.cycle07.js"></script>
+  <script defer src="./operations.cycle07.js"></script>
+  <script defer src="./family-demo.cycle07.js"></script>
 </head>
 <body>
   <div class="page family-mode">
@@ -138,6 +138,9 @@
               <h4 id="ops-stage">첫 통화</h4>
               <p id="ops-script"></p><p id="ops-previous"></p>
             </div>
+            <button id="ops-web-ring" class="big-button primary ops-full-button" type="button" disabled>어르신께 웹전화 걸기</button>
+            <p id="ops-web-ring-status" class="ops-consent-status" aria-live="polite">어르신의 웹 수신 기기 연결을 확인합니다.</p>
+            <button id="ops-web-ring-refresh" type="button" class="pilot-text-action">수신 상태 확인</button>
             <h4>통화 예약</h4>
             <div class="pilot-access-row">
               <input type="datetime-local" id="ops-date">
@@ -184,7 +187,7 @@
             <span>AI 대화·녹음 및 기록 동의</span>
           </label>
           <div class="pilot-call-actions">
-            <button id="pilot-start" class="big-button primary" type="button">AI 통화 시작 <span aria-hidden="true">↗</span></button>
+            <button id="pilot-start" class="big-button outline" type="button">이 기기에서 AI 통화 테스트 <span aria-hidden="true">↗</span></button>
             <button id="pilot-stop" class="big-button danger" type="button" disabled>통화 종료</button>
           </div>
           <button id="pilot-unmute" class="pilot-unmute" type="button" hidden>소리 켜기</button>
@@ -290,7 +293,7 @@
         </div>
       </section>
     </main>
-    <p class="release-version">Updated 2026.11.01 · Cycle 05</p>
+    <p class="release-version">Updated 2026.11.01 · Web Receiver 07</p>
   </div>
 
   <dialog id="modal" aria-labelledby="modal-title">

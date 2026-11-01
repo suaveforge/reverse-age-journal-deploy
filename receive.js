@@ -547,7 +547,7 @@
       sipMode=cfg.mode||'LEGACY';
       sipConfigurationReady=Boolean(cfg.ready);
       if(!cfg.ready||!cfg.sip_uri||!cfg.sip_secret){
-        sipState('통화 서버 내선 준비 중',true);return;
+        sipState('통화 서버 내선 준비 중',true);setTimeout(()=>initializeAsteriskSip().catch(()=>{}),5000);return;
       }
       const socket=new window.JsSIP.WebSocketInterface(cfg.websocket_url);
       const ua=new window.JsSIP.UA({

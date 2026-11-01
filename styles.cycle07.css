@@ -558,3 +558,145 @@ font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decorati
 #ops-web-ring{min-height:86px;font-size:clamp(22px,2.7vw,29px)}
 .pilot-saved-entry input,.pilot-saved-entry textarea{display:block;width:100%;margin:12px 0;padding:13px;border:1px solid #aac0ae;border-radius:10px;font:inherit;color:inherit}
 .pilot-saved-entry .big-button{width:100%;margin:12px 0 16px}
+
+
+/* LOCKED 2026-11-01 brand: approved image retained; copy only changes 안부 -> 일기.
+   Applies only presentation, never changes consent/payment/call functionality. */
+:root{
+  --ink:#003c28;
+  --body:#163e2a;
+  --soft:#5d745f;
+  --green:#055c38;
+  --accent:#edf5e5;
+  --paper:#fdfbf7;
+  --line:#dce8da;
+  background:#fdfbf7;
+}
+body,.page{background:#fdfbf7;color:var(--body)}
+.page .site-header{background:#fdfbf7}
+.page .wordmark strong{color:#06432b;letter-spacing:-.06em}
+.page .admin-entry{
+  color:#06432b;background:transparent;border-color:transparent;
+  text-decoration:underline;text-underline-offset:5px;border-radius:0;
+}
+.page .admin-entry:hover{background:transparent}
+.page .family-title,.page .ops-section-top h3,.page .pilot-section-head h2,
+.page .pilot-management-card h4,.page .pilot-heading h3{color:#003c28}
+.page .family-button,.page .big-button.primary,.page #pilot-verify,
+.page .ops-tabs button.active,.page .ops-dial-action,.page button#ops-confirm-consent{
+  background:#055c38;color:#fff;border-color:#055c38;border-radius:999px;
+  box-shadow:none;
+}
+.page .family-button.outline,.page .big-button.outline,
+.page .ops-large-outline,.page .pilot-text-action,.page .pilot-secondary-actions button,
+.page .ops-tabs button:not(.active),.page .ops-small-button,
+.page .pilot-saved-actions button,.page .ops-profile-details summary{
+  color:#06432b;background:#fffefa;border:2px solid #bfd3bd;
+  border-radius:999px;box-shadow:none;
+}
+.page .family-form input:not([type="checkbox"]),
+.page .family-form select,.page .family-more textarea,
+.page .pilot-management-card input:not([type="checkbox"]),
+.page .pilot-management-card select,.page .pilot-management-card textarea,
+.page #pilot-access,.page .pilot-draft-panel input,.page .pilot-draft-panel textarea{
+  border-color:#b9d1bc;background:#fffefa;color:#003c28;border-radius:16px;
+}
+.page .pilot-login,.page .pilot-management-card,.page .pilot-results,
+.page .pilot-draft-panel,.page .pilot-saved,.page .family-confirm,
+.page .family-amount{border-color:#e2eadf;background:#fffefa;box-shadow:none}
+.page .pilot-login,.page .pilot-management-card,
+.page .pilot-results,.page .pilot-draft-panel,.page .pilot-saved{border-radius:24px}
+.page .pilot-status:not(:empty){background:#e9f4e4;border-color:#b5d1b9}
+.page .pilot-status[data-kind="error"]:not(:empty){background:#fff0ed;border-color:#edc6bf}
+.page .family-form input:focus-visible,.page button:focus-visible,.page a:focus-visible{
+  outline:3px solid #73ac52;outline-offset:4px;
+}
+.page .family-button:hover,.page .big-button.primary:hover{background:#024b2d}
+.page .family-button.outline:hover{background:#f1f7e9}
+
+/* Precisely one principal action on the approved opening page. */
+.page.family-mode.family-opening-mode{min-height:100svh}
+.page.family-mode.family-opening-mode .site-header{
+  position:absolute;z-index:5;top:0;right:0;left:0;
+  width:100%;max-width:none;justify-content:flex-end;
+  padding:16px clamp(17px,3vw,50px);background:transparent;
+}
+.page.family-mode.family-opening-mode .wordmark{display:none}
+.page.family-mode.family-opening-mode .main{padding:0;max-width:none}
+.page.family-mode.family-opening-mode #family-journey{padding:0;margin:0;max-width:none;width:100%}
+.page.family-mode.family-opening-mode .family-shell,
+.page.family-mode.family-opening-mode .family-body{width:100%;max-width:none;margin:0}
+.page .family-opening{
+  position:relative;isolation:isolate;overflow:hidden;
+  min-height:100svh;
+  display:flex;align-items:center;flex-direction:column;justify-content:flex-start;
+  padding:clamp(34px,4vh,58px) 20px clamp(125px,14vh,175px);
+  background:radial-gradient(ellipse at 50% 40%,#fffffe 0%,#fdfbf7 67%,#faf8f0 100%);
+}
+.page .family-opening-center{
+  z-index:1;position:relative;width:100%;max-width:1450px;
+  display:flex;align-items:center;flex-direction:column;
+}
+.page .family-opening-brand{display:flex;justify-content:center;align-items:center;gap:18px}
+.page .family-opening-leaf{width:clamp(78px,9.4vw,150px);height:auto;flex:none}
+.page .family-opening-brand-name{
+  color:#004329;font-weight:900;font-size:clamp(49px,5.1vw,88px);
+  letter-spacing:-.095em;line-height:1.04;white-space:nowrap;
+  display:flex;flex-direction:column;align-items:center;
+}
+.page .family-opening-smile{width:64%;height:28px;margin-top:1px}
+.page .family-opening-heading{
+  margin:clamp(36px,5vh,60px) 0 clamp(42px,7.7vh,86px);
+  display:flex;flex-direction:column;gap:0;align-items:center;
+  text-align:center;line-height:1.27;
+  font-size:clamp(40px,5.55vw,98px);
+  font-weight:900;letter-spacing:-.078em;word-break:keep-all;
+}
+.page .family-opening-heading span{display:block;white-space:nowrap;color:#003c28}
+.page .family-opening-heading .family-opening-second{color:#57a31d}
+.page .family-opening .family-button{
+  width:min(950px,80vw);max-width:none;min-height:clamp(94px,12vw,186px);
+  margin:0;padding:15px 35px;justify-content:center;gap:clamp(18px,2.4vw,45px);
+  border:0;border-radius:999px;background:#055c38;
+  font-size:clamp(35px,4.65vw,84px);font-weight:900;
+  letter-spacing:-.052em;line-height:1.18;text-align:center;
+}
+.page .family-opening .family-button .family-start-arrow{
+  display:inline-block;font-weight:500;font-size:1.12em;line-height:1;
+}
+.page .family-opening-waves{
+  position:absolute;z-index:0;left:0;bottom:0;width:100%;height:clamp(78px,16vh,166px);
+  pointer-events:none;display:block;
+}
+.page.family-mode.family-opening-mode .release-version{display:none}
+@media(max-width:700px){
+  .page.family-mode.family-opening-mode .site-header{padding:9px 13px;min-height:50px}
+  .page.family-mode.family-opening-mode .admin-entry{
+    color:#57705e;padding:7px 10px;min-height:36px;font-size:13px;
+  }
+  .page .family-opening{
+    min-height:100svh;justify-content:center;
+    padding:66px 12px 115px;
+  }
+  .page .family-opening-brand{gap:7px}
+  .page .family-opening-leaf{width:clamp(64px,17vw,94px)}
+  .page .family-opening-brand-name{
+    font-size:clamp(40px,10vw,59px);letter-spacing:-.09em
+  }
+  .page .family-opening-smile{height:18px;margin-top:0}
+  .page .family-opening-heading{
+    font-size:clamp(26px,7.35vw,49px);
+    margin:clamp(40px,8vh,70px) 0 clamp(38px,8vh,68px);
+    letter-spacing:-.078em;line-height:1.37;
+  }
+  .page .family-opening .family-button{
+    width:min(100%,calc(100vw - 44px));min-height:96px;
+    padding:14px 20px;font-size:clamp(33px,9vw,45px)
+  }
+  .page .family-opening-waves{height:95px}
+  .page:not(.family-opening-mode) .family-button{border-radius:999px}
+  .page .ops-tabs button{border-radius:999px}
+}
+@media(prefers-reduced-motion:reduce){
+  .page .family-opening .family-button{transition:none}
+}

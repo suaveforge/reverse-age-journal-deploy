@@ -326,6 +326,36 @@
       status("시험 자료를 삭제했습니다.","ok");
     }catch(e){status(errorMessage(e),"error");}
   }
+  window.RAJ_IS_CALL_ACTIVE=()=>active;
+  window.RAJ_CLOSE_COUNSELOR_SESSION=()=>{
+    if(active)return false;
+    clearTimeout(polling);
+    clearTimeout(noticeTimer);
+    operatorCode='';
+    currentCallId='';
+    client=null;
+    sessionStorage.removeItem('raj.evidence.pilot.call');
+    $('pilot-access').value='';
+    $('pilot-call-id').textContent='';
+    $('pilot-diaries').replaceChildren();
+    $('pilot-transcript').replaceChildren();
+    if(audioObjectUrl){URL.revokeObjectURL(audioObjectUrl);audioObjectUrl='';}
+    $('pilot-audio').removeAttribute('src');
+    show($('pilot-audio'),false);
+    clearDraft();
+    show($('pilot-login'),true);
+    show($('pilot-call-panel'),false);
+    show($('pilot-results'),false);
+    show($('pilot-saved'),false);
+    show($('pilot-management'),false);
+    status('');
+    window.RAJ_SELECTED_SUBJECT='';
+    window.RAJ_CREDITS_AVAILABLE=false;
+    window.RAJ_CONSENT_APPROVED=false;
+    window.dispatchEvent(new Event('raj:pilot-disconnected'));
+    setWorking(false);
+    return true;
+  };
   function bind(id,handler){$(id).addEventListener("click",()=>{Promise.resolve(handler()).catch(e=>status(errorMessage(e),"error"));});}
   window.RAJ_OPERATIONS_REQUEST=(path,options)=>api("/operations"+path,options);
   window.RAJ_BILLING_REQUEST=(path,options)=>api("/billing"+path,options);

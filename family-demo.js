@@ -331,5 +331,10 @@
       if(r.consent!=='CONFIRMED'){state.step=3;remember();render();}
     }).catch(()=>{});
   }
+  window.addEventListener('raj:family-opened',()=>{
+    if(!state.registered)return;
+    if(state.step===3)checkConsent();
+    else if(state.step===8)dashboard();
+  });
   remember();render();
 })();

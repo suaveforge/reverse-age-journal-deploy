@@ -1017,3 +1017,13 @@ body,.page{background:#fdfbf7;color:var(--body)}
 
 /* Product footer metadata belongs in git/deployment logs, not the care interface. */
 .page .release-version{display:none!important}
+
+
+/* Approved daily caller journey: hide legacy same-browser sandbox call
+   actions, keeping its API/SDK/source untouched. Dedicated elder receiver
+   is the sole primary caller surface. */
+.page.counselor-mode #pilot-call-panel{display:none!important}
+.page.counselor-mode [data-ops-panel="tickets"]{
+ background:transparent!important;border:0!important;padding:8px 0!important;
+ border-radius:0!important;
+}

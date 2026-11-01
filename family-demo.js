@@ -140,7 +140,7 @@
     try{
       const data=await request('/onboarding');
       if(data.consent==='CONFIRMED')move(4);
-      else tell('상담사의 동의 확인이 아직 완료되지 않았습니다.');
+      else tell('아직 상담사 확인이 없습니다. 상담사 화면에서 어르신 통화 동의를 직접 확인해 주세요.');
     }catch(e){tell(e.message);}
     finally{if(action)action.disabled=false;}
   }
@@ -239,10 +239,15 @@
       document.getElementById('family-elder-form').onsubmit=e=>{e.preventDefault();submitElder();};
       document.getElementById('family-register').onclick=submitElder;
     }else if(state.step===3){
-      page('어르신 동의 요청 접수',
-        '<p class="family-primary-message">상담사가 어르신의 통화 동의를 직접 확인해야 결제를 진행할 수 있습니다.</p>'+
-        '<p class="family-primary-message">확인된 뒤 아래 버튼으로 다음 단계로 이동합니다.</p>'+
-        button('동의 결과 확인','family-consent-check')+error,false);
+      page('통화 동의 확인 대기',
+        '<p class="family-primary-message">등록 완료. 상담사가 어르신에게 AI 통화·녹음·기록 동의를 직접 확인해야 합니다.</p>'+
+        '<p class="family-primary-message">첫 웹통화 테스트에는 자동 재통화 동의가 필요하지 않습니다.</p>'+
+        button('상담사 화면에서 확인','family-to-counselor')+
+        button('확인 후 계속','family-consent-check','outline')+error,false);
+      document.getElementById('family-to-counselor').onclick=()=>{
+        if(!document.querySelector('.page').classList.contains('counselor-mode'))document.getElementById('admin-entry')?.click();
+        document.getElementById('pilot-access')?.scrollIntoView({behavior:'smooth',block:'start'});
+      };
       document.getElementById('family-consent-check').onclick=checkConsent;
     }else if(state.step===4){
       plans();

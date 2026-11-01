@@ -33,7 +33,7 @@
     return bellAllowed;
   }
   function playChime(preview=false){
-    if(!bellAllowed||!bellContext||bellContext.state!=='running'||document.hidden)return;
+    if(!bellAllowed||!bellContext||bellContext.state!=='running')return;
     if(!preview||phase==='ringing'){
       if(phase!=='ringing')return;
     }
@@ -70,11 +70,11 @@
     document.body.classList.remove('ringing');
   }
   function beginBell(){
-    if(phase!=='ringing'||!bellAllowed||bellTimer||document.hidden)return;
+    if(phase!=='ringing'||!bellAllowed||bellTimer)return;
     bellOutput.gain.setValueAtTime(0.22,bellContext.currentTime);
     playChime();
     bellTimer=setInterval(()=>{
-      if(phase!=='ringing'||document.hidden){stopBell();return;}
+      if(phase!=='ringing'){stopBell();return;}
       playChime();
     },3800);
     navigator.vibrate?.([250,120,250]);
@@ -205,7 +205,7 @@
       show('receiver-alert',false);
       title('통화 상태 확인 중','기록을 정리하고 있습니다.');
     }else{
-      title('전화 기다리는 중','예약 시간이 되면 이 화면에서 전화가 울립니다.');
+      title('전화 기다리는 중','예약 시간이 되면 문자로도 전화 알림을 보내드립니다.');
     }
   }
   async function check(){
@@ -369,10 +369,9 @@
   sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
   sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
   check();
-  setInterval(()=>{if(!document.hidden)check();},3500);
+  setInterval(check,3500);
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden)stopBell();
-    else{
+    if(!document.hidden){
       if(phase==='ringing')beginBell();
       check();
     }

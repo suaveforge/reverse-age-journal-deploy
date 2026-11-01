@@ -142,3 +142,7 @@ body,.receiver{background:#fdfbf7;color:#003c28}
 @media(prefers-reduced-motion:reduce){
  .receiver .action{transition:none}
 }
+
+/* Final visual QA corrections: avoid one-character wraps and remove implementation metadata from user UI. */
+.receiver .center h1{word-break:keep-all;overflow-wrap:normal;text-wrap:balance}
+@media(max-width:420px){.receiver .center h1{font-size:clamp(32px,8.6vw,39px)}}

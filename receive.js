@@ -350,8 +350,21 @@
     updateMicActivity();
   }
   function render(result){
+    const needsConsent=Boolean(result.consent_required);
+    const pushReady=Boolean(result.background_push_ready);
+    // A registered SIP identity is not proof that a sleeping phone will ring.
+    // Surface missing OS push enrollment explicitly instead of silently
+    // pretending the receiver is prepared.
+    const pushButton=$('receiver-enable-notifications');
+    if(pushButton)pushButton.hidden=needsConsent||pushReady;
+    if(!needsConsent){
+      if(pushReady)pushFeedback('');
+      else if('Notification' in window&&Notification.permission==='denied')
+        pushFeedback('잠금화면 알림 권한이 차단되어 있어 전화가 울리지 않습니다.');
+      else pushFeedback('웹을 내려놓고 전화받으려면 잠금화면 전화 알림을 켜야 합니다.');
+    }
     if(incomingSip||phase==='connecting'||phase==='in-call')return;
-    const consentRequired=Boolean(result.consent_required);
+    const consentRequired=needsConsent;
     show('receiver-consent-panel',consentRequired);
     if(consentRequired){
       stopBell();phase='idle';stopCallUI();
@@ -734,6 +747,17 @@
   }
 
   $('receiver-consent-confirm').addEventListener('click',confirmElderConsent);
+  $('receiver-enable-notifications')?.addEventListener('click',async()=>{
+    // The permission prompt must originate in this physical tap.
+    const request=beginNotificationPermission();
+    const button=$('receiver-enable-notifications');
+    button.disabled=true;
+    try{
+      const ready=await registerBackgroundReceiver(await request);
+      if(ready)await check();
+    }catch(e){pushFeedback('알림 연결 실패: '+messageOf(e));}
+    finally{button.disabled=false;}
+  });
   $('receiver-reconnect').addEventListener('click',()=>initializeAsteriskSip(true));
   $('receiver-alert').addEventListener('click',enableBell);
   $('receiver-answer').addEventListener('click',answer);

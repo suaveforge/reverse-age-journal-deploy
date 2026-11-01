@@ -58,7 +58,7 @@
      stopBell();
      show('receiver-incoming',false);
      show('receiver-connected',false);
-     show('receiver-refresh',false);
+     
      return;
    }
    const ring=r.ring;
@@ -66,8 +66,20 @@
    stopBell();
    show('receiver-incoming',false);
    show('receiver-connected',false);
-   show('receiver-refresh',false);
-   if(!ring || ['MISSED','DECLINED','CANCELLED','FAILED'].includes(ring.status)){
+   
+   if(ring?.status==='COMPLETED'){
+     title('통화가 끝났어요','대화 기록이 저장됐습니다.');
+     return;
+   }
+   if(ring?.status==='NO_SPEECH'){
+     title('통화가 끝났어요','대화 내용이 없어 회기를 차감하지 않았습니다.');
+     return;
+   }
+   if(ring?.status==='FAILED'){
+     title('통화 연결 실패','통화가 완료되지 않았습니다.');
+     return;
+   }
+   if(!ring || ['MISSED','DECLINED','CANCELLED'].includes(ring.status)){
      title('전화 기다리는 중','이 화면을 열어두시면 전화가 울립니다.');
      return;
    }
@@ -79,13 +91,9 @@
      show('receiver-incoming',true);
      return;
    }
-   if(ring.status==='COMPLETED'){
-     title('통화가 끝났어요','대화 기록을 저장했습니다.');
-     show('receiver-refresh',true);return;
-   }
    if(['CONNECTING','IN_CALL','ENDING'].includes(ring.status)){
-     title('통화 기록 확인 중','연결이 끊겼다면 상담사에게 새 통화를 요청하세요.');
-     show('receiver-refresh',true);
+     title('통화 기록 확인 중','대화 기록을 정리하고 있습니다.');
+     
    }
  }
  async function check(){
@@ -96,7 +104,7 @@
      if(answered && s.ring?.status==='IN_CALL'){
        await finalize(false);
      } else {render(s);error('');}
-   }catch(e){title('연결을 확인해 주세요','링크 또는 네트워크 상태를 확인하세요.');error(pendingMessage(e));show('receiver-refresh',true);}
+   }catch(e){title('연결을 확인해 주세요','링크 또는 네트워크 상태를 확인하세요.');error(pendingMessage(e));}
    finally{polling=false;}
  }
  async function unlock(){
@@ -111,16 +119,16 @@
    try{
      const r=await api('result');
      if(r.state==='COMPLETED'){
-       title('대화를 저장했어요','상담사가 일기를 검토하면 가족이 볼 수 있습니다.');
-       show('receiver-refresh',true);answered=false;
+       title('통화가 끝났어요','대화 기록이 저장됐습니다.');
+       answered=false;
      }else if(r.state==='NO_SPEECH'){
        title('통화 종료','대화 내용이 없어 회기를 차감하지 않았습니다.');
-       show('receiver-refresh',true);answered=false;
+       answered=false;
      }else if(force||answered){
        title('기록 정리 중','대화 기록을 불러오고 있습니다.');
-       show('receiver-refresh',true);
+       
      }
-   }catch(e){error(pendingMessage(e));show('receiver-refresh',true);}
+   }catch(e){error(pendingMessage(e));}
  }
  async function answer(){
    if(active||!ringId)return;
@@ -151,8 +159,8 @@
      show('receiver-connected',true);show('receiver-incoming',false);
    }catch(e){
      active=false;show('receiver-connected',false);show('receiver-incoming',false);
-     title('통화 연결 실패','상담사에게 다시 요청해 주세요.');
-     error(pendingMessage(e));show('receiver-refresh',true);
+     title('통화 연결 실패','연결 상태를 확인해 주세요.');
+     error(pendingMessage(e));
    }finally{btn.disabled=false;}
  }
  async function decline(){
@@ -189,10 +197,9 @@
  $('receiver-decline').addEventListener('click',decline);
  $('receiver-sound').addEventListener('click',unlock);
  $('receiver-hangup').addEventListener('click',hangup);
- $('receiver-refresh').addEventListener('click',async()=>{await finalize(false);await check();});
  if(!/^[0-9a-f]{64}$/.test(token)){
    title('연결 링크가 필요해요','보호자에게 웹전화 연결 링크를 받아 주세요.');
-   show('receiver-refresh',false);
+   
    return;
  }
  sessionStorage.setItem('raj.receiver.token',token);

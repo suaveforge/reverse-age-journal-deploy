@@ -231,12 +231,16 @@
         button('내 이용 현황','family-dashboard'),false);
       document.getElementById('family-dashboard').onclick=async()=>{
         try{
-          const r=await request('/onboarding');
+          const [r,summary]=await Promise.all([request('/onboarding'),request('/summary')]);
           if(!r.registered)throw Error('등록 정보를 확인할 수 없습니다.');
+          const shared=(summary.shared && Array.isArray(summary.reports))
+            ?summary.reports.slice(0,6).map(report=>
+               '<article class="family-shared-summary"><strong>'+esc(report.title)+'</strong>'+
+               '<p>'+esc(report.excerpt)+'</p></article>').join(''):'';
           page('이용 현황','<div class="family-confirm"><strong>'+esc(r.elder_name)+'</strong>'+
             '<strong>'+esc(dateDisplay(r.booking_at||state.when))+'</strong>'+
-            '<strong>결제한 이용권 '+state.credits+'회</strong></div>'+
-            '<p class="family-primary-message">통화 기록은 통화가 완료된 뒤 확인할 수 있습니다.</p>',false);
+            '<strong>테스트 이용권 '+state.credits+'회</strong></div>'+
+            (shared?'<h2 class="family-summary-title">가족에게 공유된 기록</h2>'+shared:''),false);
         }catch(e){tell(e.message);}
       };
     }

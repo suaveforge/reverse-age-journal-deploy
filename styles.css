@@ -533,3 +533,8 @@ font-size:clamp(21px,2.3vw,25px);min-height:62px;padding:13px 18px;text-decorati
 
 .page .ops-consent-status{font-size:clamp(22px,2.5vw,28px);font-weight:850;line-height:1.4;color:#9b4637;margin:18px 0 5px}
 .page .ops-consent-status[hidden]{display:none!important}
+
+.page .family-summary-title{font-size:clamp(28px,3.4vw,35px);font-weight:850;margin:30px 0 12px}
+.page .family-shared-summary{padding:22px 10px;border-bottom:2px solid #d4e3d7}
+.page .family-shared-summary strong{font-size:clamp(23px,2.6vw,28px)}
+.page .family-shared-summary p{font-size:clamp(21px,2.4vw,26px);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}

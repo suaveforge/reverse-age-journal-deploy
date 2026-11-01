@@ -1,212 +1,378 @@
-/* Dedicated elder device: fragment-only pairing token, no login or PSTN. */
+/* Elder web receiver: explicit consent, real live-call feedback, no PSTN. */
 (() => {
- 'use strict';
- const $=id=>document.getElementById(id);
- const BASE=String(window.RAJ_CONFIG?.pilotApiBase||'').replace(/\/$/,'');
- const token=location.hash.slice(1)||sessionStorage.getItem('raj.receiver.token')||'';
- let client=null,active=false,polling=false,answered=false,ringId='',sdkPromise=null;
- let lastState='';
- let bellContext=null,bellTimer=0,bellAllowed=false;
- function ringTone(){
-   if(!bellAllowed||!bellContext||document.hidden)return;
-   try{
-     const osc=bellContext.createOscillator(),gain=bellContext.createGain();
-     osc.type='sine';osc.frequency.value=640;
-     gain.gain.setValueAtTime(0.0001,bellContext.currentTime);
-     gain.gain.exponentialRampToValueAtTime(0.1,bellContext.currentTime+0.025);
-     gain.gain.exponentialRampToValueAtTime(0.0001,bellContext.currentTime+0.3);
-     osc.connect(gain).connect(bellContext.destination);
-     osc.start();osc.stop(bellContext.currentTime+0.32);
-   }catch{}
- }
- function beginBell(){
-   if(!bellAllowed||bellTimer)return;
-   ringTone();bellTimer=setInterval(ringTone,1300);
-   navigator.vibrate?.([180,120,180]);
- }
- function stopBell(){if(bellTimer){clearInterval(bellTimer);bellTimer=0;}}
- async function enableBell(){
-   try{
-     bellContext=bellContext||new (window.AudioContext||window.webkitAudioContext)();
-     await bellContext.resume();bellAllowed=true;
-     $('receiver-alert').hidden=true;
-     title('전화 기다리는 중','벨소리가 켜졌습니다. 화면을 열어두세요.');
-     if(!document.getElementById('receiver-incoming').hidden)beginBell();
-   }catch(e){error('벨소리를 켤 수 없습니다. 화면 알림은 계속 표시됩니다.');}
- }
- const title=(t,n)=>{$('receiver-title').textContent=t;$('receiver-note').textContent=n||'';};
- const show=(id,yes)=>{$(id).hidden=!yes;};
- const error=t=>{show('receiver-error',!!t);$('receiver-error').textContent=t||'';};
- const pendingMessage=(e)=>String(e?.message||e||'연결 오류').replace(/[<>{}]/g,'');
- async function api(path,options={}){
-   const r=await fetch(BASE+'/api/pilot/receiver/'+path,{
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const BASE=String(window.RAJ_CONFIG?.pilotApiBase||'').replace(/\/$/,'');
+  const token=location.hash.slice(1)||sessionStorage.getItem('raj.receiver.token')||'';
+
+  let client=null, active=false, polling=false, answered=false, ringId='', sdkPromise=null;
+  let lastRingId='', phase='idle', agentSpeaking=false, micMuted=false;
+  let durationTimer=0, activityTimer=0, callStartedAt=0, lastVoiceState='', speakerNeedsTap=false;
+  let bellContext=null, bellOutput=null, bellTimer=0, bellAllowed=false;
+  const bellNotes=new Set();
+  const title=(heading,note)=>{
+    $('receiver-title').textContent=heading;
+    $('receiver-note').textContent=note||'';
+  };
+  const show=(id,visible)=>{$(id).hidden=!visible;};
+  const error=message=>{show('receiver-error',!!message);$('receiver-error').textContent=message||'';};
+  const messageOf=e=>String(e?.message||e||'연결 오류').replace(/[<>{}]/g,'');
+
+  // iOS Safari requires an explicit tap to unlock audio. Elder consent is
+  // already that gesture; do not demand an additional bell-enable button.
+  async function unlockBell(){
+    if(!bellContext||bellContext.state==='closed'){
+      bellContext=new (window.AudioContext||window.webkitAudioContext)();
+      bellOutput=bellContext.createGain();
+      bellOutput.gain.value=0.22;
+      bellOutput.connect(bellContext.destination);
+    }
+    await bellContext.resume();
+    bellAllowed=bellContext.state==='running';
+    if(bellAllowed)show('receiver-alert',false);
+    return bellAllowed;
+  }
+  function playChime(preview=false){
+    if(!bellAllowed||!bellContext||bellContext.state!=='running'||document.hidden)return;
+    if(!preview||phase==='ringing'){
+      if(phase!=='ringing')return;
+    }
+    // A two-pulse incoming ring, not the short 1.3s call-interfering beep.
+    // Its output is routed through one gain so Answer can silence it instantly.
+    const t=bellContext.currentTime+0.01;
+    for(const pulse of [0,0.88]){
+      for(const [frequency,offset] of [[659,0],[880,0.08],[1047,0.16]]){
+        const osc=bellContext.createOscillator(),volume=bellContext.createGain();
+        const begin=t+pulse+offset, end=begin+0.45;
+        osc.type='sine';
+        osc.frequency.value=frequency;
+        volume.gain.setValueAtTime(0.0001,begin);
+        volume.gain.exponentialRampToValueAtTime(0.23,begin+0.02);
+        volume.gain.exponentialRampToValueAtTime(0.0001,end);
+        osc.connect(volume);volume.connect(bellOutput);
+        bellNotes.add(osc);
+        osc.onended=()=>{bellNotes.delete(osc);osc.disconnect();volume.disconnect();};
+        osc.start(begin);osc.stop(end+0.02);
+      }
+    }
+  }
+  function stopBell(){
+    if(bellTimer){clearInterval(bellTimer);bellTimer=0;}
+    // Clearing an interval alone does not cancel already-scheduled oscillators.
+    if(bellOutput&&bellContext?.state==='running'){
+      const t=bellContext.currentTime;
+      bellOutput.gain.cancelScheduledValues(t);
+      bellOutput.gain.setValueAtTime(0,t);
+    }
+    for(const osc of bellNotes){try{osc.stop();}catch{}}
+    bellNotes.clear();
+    navigator.vibrate?.(0);
+    document.body.classList.remove('ringing');
+  }
+  function beginBell(){
+    if(phase!=='ringing'||!bellAllowed||bellTimer||document.hidden)return;
+    bellOutput.gain.setValueAtTime(0.22,bellContext.currentTime);
+    playChime();
+    bellTimer=setInterval(()=>{
+      if(phase!=='ringing'||document.hidden){stopBell();return;}
+      playChime();
+    },3800);
+    navigator.vibrate?.([250,120,250]);
+  }
+  async function enableBell(){
+    try{
+      const ok=await unlockBell();
+      if(!ok)throw Error('오디오가 차단돼 있습니다.');
+      if(phase==='ringing')beginBell();
+      else{
+        bellOutput.gain.setValueAtTime(0.22,bellContext.currentTime);
+        playChime(true); // Immediate audible feedback to this button.
+      }
+    }catch(e){error('벨소리를 켤 수 없습니다. 기기 음량과 브라우저 설정을 확인해 주세요.');}
+  }
+  async function api(path,options={}){
+    const response=await fetch(BASE+'/api/pilot/receiver/'+path,{
       ...options,cache:'no-store',
-      headers:{'X-RAJ-RECEIVER-TOKEN':token,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}
-   });
-   const data=await r.json().catch(()=>({}));
-   if(!r.ok)throw Error(data.detail||'SERVER_'+r.status);
-   return data;
- }
- function render(r){
-   if(active)return;
-   const consentNeeded=Boolean(r.consent_required);
-   show('receiver-consent-panel',consentNeeded);
-   show('receiver-alert',!consentNeeded&&!bellAllowed);
-   if(consentNeeded){
-     title('안부 상담 안내','동의하시면 예약한 시간에 이 화면으로 상담 전화를 받을 수 있습니다.');
-     document.body.classList.remove('ringing');
-     stopBell();
-     show('receiver-incoming',false);
-     show('receiver-connected',false);
-     
-     return;
-   }
-   const ring=r.ring;
-   document.body.classList.remove('ringing');
-   stopBell();
-   show('receiver-incoming',false);
-   show('receiver-connected',false);
-   
-   if(ring?.status==='COMPLETED'){
-     title('통화가 끝났어요','대화 기록이 저장됐습니다.');
-     return;
-   }
-   if(ring?.status==='NO_SPEECH'){
-     title('통화가 끝났어요','대화 내용이 없어 회기를 차감하지 않았습니다.');
-     return;
-   }
-   if(ring?.status==='FAILED'){
-     title('통화 연결 실패','통화가 완료되지 않았습니다.');
-     return;
-   }
-   if(!ring || ['MISSED','DECLINED','CANCELLED'].includes(ring.status)){
-     title('전화 기다리는 중','이 화면을 열어두시면 전화가 울립니다.');
-     return;
-   }
-   if(ring.status==='RINGING'){
-     if(lastState!==ring.id){lastState=ring.id;ringId=ring.id;}
-     document.body.classList.add('ringing');
-     beginBell();
-     title('전화가 왔어요','아래 버튼을 누르면 AI 상담을 시작합니다.');
-     show('receiver-incoming',true);
-     return;
-   }
-   if(['CONNECTING','IN_CALL','ENDING'].includes(ring.status)){
-     title('통화 기록 확인 중','대화 기록을 정리하고 있습니다.');
-     
-   }
- }
- async function check(){
-   if(polling||active)return;
-   polling=true;
-   try{
-     const s=await api('status');
-     if(answered && s.ring?.status==='IN_CALL'){
-       await finalize(false);
-     } else {render(s);error('');}
-   }catch(e){title('연결을 확인해 주세요','링크 또는 네트워크 상태를 확인하세요.');error(pendingMessage(e));}
-   finally{polling=false;}
- }
- async function unlock(){
-   if(!client||!active)return;
-   try{
-     if(typeof client.startAudioPlayback==='function')await client.startAudioPlayback();
-     title('AI와 통화 중','소리를 켰습니다.');
-   }catch(e){error('소리를 켜지 못했습니다: '+pendingMessage(e));}
- }
- async function finalize(force=true){
-   if(active)return;
-   try{
-     const r=await api('result');
-     if(r.state==='COMPLETED'){
-       title('통화가 끝났어요','대화 기록이 저장됐습니다.');
-       answered=false;
-     }else if(r.state==='NO_SPEECH'){
-       title('통화 종료','대화 내용이 없어 회기를 차감하지 않았습니다.');
-       answered=false;
-     }else if(force||answered){
-       title('기록 정리 중','대화 기록을 불러오고 있습니다.');
-       
-     }
-   }catch(e){error(pendingMessage(e));}
- }
- async function answer(){
-   if(active||!ringId)return;
-   stopBell();
-   const btn=$('receiver-answer');btn.disabled=true;
-   error('');
-   title('통화 연결 중','마이크 사용을 허용해 주세요.');
-   // Capture the actual user gesture early for mobile Safari mic permission.
-   try{
-     if(navigator.mediaDevices?.getUserMedia){
-       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-       stream.getTracks().forEach(t=>t.stop());
-     }
-     const sdk=await sdkPromise;
-     const result=await api('accept',{method:'POST',body:JSON.stringify({id:ringId})});
-     answered=true;
-     client=new sdk.RetellWebClient();
-     client.on('call_started',()=>{active=true;title('AI와 통화 중','편하게 말씀해 주세요.');show('receiver-connected',true);show('receiver-incoming',false);});
-     client.on('call_ready',()=>{active=true;title('AI와 통화 중','편하게 말씀해 주세요.');show('receiver-connected',true);show('receiver-incoming',false);});
-     client.on('call_ended',()=>{
-       active=false;client=null;show('receiver-connected',false);
-       title('기록 정리 중','대화를 저장하고 있습니다.');
-       finalize();});
-     client.on('error',e=>{active=false;show('receiver-connected',false);error('통화 오류: '+pendingMessage(e));finalize();});
-     await client.startCall({accessToken:result.access_token});
-     active=true;
-     title('AI와 통화 중','편하게 말씀해 주세요.');
-     show('receiver-connected',true);show('receiver-incoming',false);
-   }catch(e){
-     active=false;show('receiver-connected',false);show('receiver-incoming',false);
-     title('통화 연결 실패','연결 상태를 확인해 주세요.');
-     error(pendingMessage(e));
-   }finally{btn.disabled=false;}
- }
- async function decline(){
-   stopBell();
-   if(!ringId)return;
-   try{await api('decline',{method:'POST',body:JSON.stringify({id:ringId})});ringId='';await check();}
-   catch(e){error(pendingMessage(e));}
- }
- async function hangup(){
-   if(!client)return;
-   $('receiver-hangup').disabled=true;
-   try{await client.stopCall();}catch(e){error(pendingMessage(e));}
-   active=false;client=null;show('receiver-connected',false);
-   await finalize();
-   $('receiver-hangup').disabled=false;
- }
- async function confirmElderConsent(){
-   if(!$('receiver-consent-check').checked){
-     error('AI 상담과 녹음 안내를 확인해 주세요.');
-     return;
-   }
-   const button=$('receiver-consent-confirm');button.disabled=true;
-   try{
-     await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
-     show('receiver-consent-panel',false);
-     error('');
-     await check();
-   }catch(e){error(pendingMessage(e));}
-   finally{button.disabled=false;}
- }
- $('receiver-consent-confirm').addEventListener('click',confirmElderConsent);
- $('receiver-alert').addEventListener('click',enableBell);
- $('receiver-answer').addEventListener('click',answer);
- $('receiver-decline').addEventListener('click',decline);
- $('receiver-sound').addEventListener('click',unlock);
- $('receiver-hangup').addEventListener('click',hangup);
- if(!/^[0-9a-f]{64}$/.test(token)){
-   title('연결 링크가 필요해요','보호자에게 웹전화 연결 링크를 받아 주세요.');
-   
-   return;
- }
- sessionStorage.setItem('raj.receiver.token',token);
- // Load SDK before an incoming ring; acceptance is the first billable action.
- sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
- sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
- check();
- setInterval(()=>{if(!document.hidden)check();},3500);
- document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBell();else check();});
+      headers:{'X-RAJ-RECEIVER-TOKEN':token,
+        ...(options.body?{'Content-Type':'application/json'}:{}),
+        ...(options.headers||{})}
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(data.detail||'SERVER_'+response.status);
+    return data;
+  }
+
+  function meter(id,level){
+    const bars=$(id).children;
+    const v=Math.max(0,Math.min(1,level||0));
+    const shape=[.56,.85,1,.75,.48];
+    for(let i=0;i<bars.length;i++){
+      const amount=.15+v*shape[i]*.85;
+      bars[i].style.transform='scaleY('+amount.toFixed(2)+')';
+    }
+  }
+  function setVoice(agentIsSpeaking,userIsSpeaking,micLevel=0,agentLevel=0){
+    if(!active)return;
+    const talking=!micMuted&&Boolean(userIsSpeaking);
+    const key=[agentIsSpeaking,talking,micMuted].join(':');
+    if(lastVoiceState!==key){
+      lastVoiceState=key;
+      $('voice-ai-status').textContent=agentIsSpeaking?'말하는 중':'듣는 중';
+      $('voice-self-status').textContent=micMuted?'마이크 꺼짐':talking?'말하는 중':'듣는 중';
+      $('voice-ai').classList.toggle('talking',agentIsSpeaking);
+      $('voice-self').classList.toggle('talking',talking);
+      $('voice-self').classList.toggle('muted',micMuted);
+    }
+    meter('voice-self-bars',micMuted?0:micLevel);
+    meter('voice-ai-bars',agentIsSpeaking?Math.max(.16,agentLevel):0);
+  }
+  function updateMicActivity(){
+    if(!active||!client)return;
+    // LiveKit publishes the same microphone track Retell is already using.
+    // Reading its voice-activity stats avoids opening a second microphone.
+    const speaker=client.room?.localParticipant;
+    const level=typeof speaker?.audioLevel==='number'?speaker.audioLevel:0;
+    const talking=!micMuted&&(speaker?.isSpeaking===true||level>0.045);
+    setVoice(agentSpeaking,talking,level*4,client.analyzerComponent?.calculateVolume?.()||0);
+  }
+  function stopCallUI(){
+    if(durationTimer){clearInterval(durationTimer);durationTimer=0;}
+    if(activityTimer){clearInterval(activityTimer);activityTimer=0;}
+    agentSpeaking=false;micMuted=false;lastVoiceState='';
+    show('receiver-voice',false);
+    show('receiver-connected',false);
+    show('receiver-sound',false);
+    show('receiver-signal',true);
+    $('receiver-mute').textContent='마이크 끄기';
+    $('receiver-mute').setAttribute('aria-pressed','false');
+  }
+  function startCallUI(){
+    stopBell();
+    phase='in-call';active=true;
+    show('receiver-incoming',false);
+    show('receiver-signal',false);
+    show('receiver-voice',true);
+    show('receiver-connected',true);
+    show('receiver-sound',speakerNeedsTap);
+    title('AI와 통화 중','편하게 말씀해 주세요.');
+    if(!callStartedAt)callStartedAt=Date.now();
+    const updateDuration=()=>{
+      const elapsed=Math.max(0,Math.floor((Date.now()-callStartedAt)/1000));
+      $('receiver-duration').textContent=String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');
+    };
+    updateDuration();
+    if(!durationTimer)durationTimer=setInterval(updateDuration,1000);
+    if(!activityTimer)activityTimer=setInterval(updateMicActivity,120);
+    updateMicActivity();
+  }
+  function render(result){
+    if(phase==='connecting'||phase==='in-call')return;
+    const consentRequired=Boolean(result.consent_required);
+    show('receiver-consent-panel',consentRequired);
+    if(consentRequired){
+      stopBell();phase='idle';stopCallUI();
+      show('receiver-alert',false);
+      show('receiver-incoming',false);
+      title('안부 상담 안내','동의하시면 예약한 시간에 이 화면으로 상담 전화를 받을 수 있습니다.');
+      return;
+    }
+    const ring=result.ring;
+    show('receiver-incoming',false);
+    if(ring?.status==='RINGING'){
+      phase='ringing';ringId=ring.id;
+      if(lastRingId!==ring.id)lastRingId=ring.id;
+      document.body.classList.add('ringing');
+      show('receiver-incoming',true);
+      show('receiver-alert',!bellAllowed);
+      beginBell();
+      title('전화가 왔어요','전화 받기를 눌러 주세요.');
+      return;
+    }
+    stopBell();phase='idle';
+    show('receiver-alert',!bellAllowed);
+    if(ring?.status==='COMPLETED'){
+      show('receiver-alert',false);
+      title('통화가 끝났어요','대화 기록이 저장됐습니다.');
+    }else if(ring?.status==='NO_SPEECH'){
+      show('receiver-alert',false);
+      title('통화가 끝났어요','대화 내용이 없어 회기를 차감하지 않았습니다.');
+    }else if(ring?.status==='FAILED'){
+      show('receiver-alert',false);
+      title('통화 연결 실패','통화가 완료되지 않았습니다.');
+    }else if(['CONNECTING','IN_CALL','ENDING'].includes(ring?.status)){
+      show('receiver-alert',false);
+      title('통화 상태 확인 중','기록을 정리하고 있습니다.');
+    }else{
+      title('전화 기다리는 중','예약 시간이 되면 이 화면에서 전화가 울립니다.');
+    }
+  }
+  async function check(){
+    if(polling||active||phase==='connecting'||phase==='in-call')return;
+    polling=true;
+    try{
+      const result=await api('status');
+      if(answered&&result.ring?.status==='IN_CALL')await finalize(false);
+      else{render(result);error('');}
+    }catch(e){
+      if(phase!=='ending'){title('연결을 확인해 주세요','네트워크 연결을 확인하세요.');error(messageOf(e));}
+    }finally{polling=false;}
+  }
+  async function finalize(force=true){
+    if(active)return;
+    try{
+      const result=await api('result');
+      if(result.state==='COMPLETED'){
+        phase='finished';answered=false;
+        title('통화가 끝났어요','대화 기록이 저장됐습니다.');
+      }else if(result.state==='NO_SPEECH'){
+        phase='finished';answered=false;
+        title('통화가 끝났어요','대화 내용이 없어 회기를 차감하지 않았습니다.');
+      }else if(result.state==='FAILED'){
+        phase='finished';answered=false;
+        title('통화 연결 실패','통화가 완료되지 않았습니다.');
+      }else if(force||answered){
+        phase='ending';
+        title('기록 정리 중','대화 기록을 저장하고 있습니다.');
+      }
+    }catch(e){error(messageOf(e));}
+  }
+  async function unlockSpeaker(){
+    if(!client)return;
+    try{
+      await client.startAudioPlayback();
+      speakerNeedsTap=false;show('receiver-sound',false);
+      error('');
+    }catch(e){error('소리를 켤 수 없습니다. 기기 음량을 확인해 주세요.');}
+  }
+  function endClientCall(){
+    stopBell();stopCallUI();active=false;phase='ending';
+    client=null;
+    title('기록 정리 중','대화 기록을 저장하고 있습니다.');
+    finalize();
+  }
+  async function answer(){
+    if(active||phase==='connecting'||!ringId)return;
+    // The very first operation silences the ring. Never restart it in polling.
+    phase='connecting';stopBell();
+    const button=$('receiver-answer');button.disabled=true;
+    show('receiver-incoming',false);
+    error('');title('통화 연결 중','마이크 사용을 허용해 주세요.');
+    try{
+      // Preflight mic permission within the Answer gesture, before network calls.
+      if(navigator.mediaDevices?.getUserMedia){
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        stream.getTracks().forEach(track=>track.stop());
+      }
+      const sdk=await sdkPromise;
+      const result=await api('accept',{method:'POST',body:JSON.stringify({id:ringId})});
+      answered=true;callStartedAt=0;speakerNeedsTap=false;
+      const current=new sdk.RetellWebClient();
+      client=current;
+      current.on('call_started',()=>{if(client===current)startCallUI();});
+      current.on('call_ready',async()=>{
+        if(client!==current)return;
+        try{await current.startAudioPlayback();}
+        catch{speakerNeedsTap=true;show('receiver-sound',true);}
+      });
+      current.on('agent_start_talking',()=>{
+        if(client!==current)return;
+        agentSpeaking=true;updateMicActivity();
+      });
+      current.on('agent_stop_talking',()=>{
+        if(client!==current)return;
+        agentSpeaking=false;updateMicActivity();
+      });
+      current.on('audio',samples=>{
+        if(client!==current||!active||!agentSpeaking||!samples?.length)return;
+        // Real agent output samples; no simulated waveform.
+        let sum=0;for(let i=0;i<samples.length;i++)sum+=samples[i]*samples[i];
+        const rms=Math.sqrt(sum/samples.length);
+        meter('voice-ai-bars',Math.min(1,rms*7));
+      });
+      current.on('call_ended',()=>{
+        if(client===current)endClientCall();
+      });
+      current.on('error',e=>{
+        if(client!==current)return;
+        stopBell();error('통화 오류: '+messageOf(e));
+      });
+      await current.startCall({accessToken:result.access_token,emitRawAudioSamples:true});
+      if(!active&&phase==='connecting'){
+        throw Error('음성 통화가 연결되지 않았습니다.');
+      }
+    }catch(e){
+      stopBell();stopCallUI();active=false;phase='idle';
+      title('통화 연결 실패','연결 상태를 확인해 주세요.');
+      error(messageOf(e));
+    }finally{button.disabled=false;}
+  }
+  async function decline(){
+    phase='idle';stopBell();
+    if(!ringId)return;
+    try{
+      await api('decline',{method:'POST',body:JSON.stringify({id:ringId})});
+      ringId='';await check();
+    }catch(e){error(messageOf(e));}
+  }
+  async function hangup(){
+    if(!client)return;
+    $('receiver-hangup').disabled=true;
+    stopBell();
+    try{await client.stopCall();}catch(e){error(messageOf(e));}
+    if(client)endClientCall();
+    $('receiver-hangup').disabled=false;
+  }
+  function toggleMute(){
+    if(!client||!active)return;
+    try{
+      if(micMuted)client.unmute();
+      else client.mute();
+      micMuted=!micMuted;
+      $('receiver-mute').textContent=micMuted?'마이크 켜기':'마이크 끄기';
+      $('receiver-mute').setAttribute('aria-pressed',String(micMuted));
+      updateMicActivity();
+    }catch(e){error(messageOf(e));}
+  }
+  async function confirmElderConsent(){
+    if(!$('receiver-consent-check').checked){
+      error('AI 상담과 녹음 안내를 확인해 주세요.');return;
+    }
+    const button=$('receiver-consent-confirm');button.disabled=true;
+    // Start resume() during this user gesture: Safari does not grant it after fetch.
+    const unlock=unlockBell().catch(()=>false);
+    try{
+      await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
+      const allowed=await unlock;
+      show('receiver-consent-panel',false);
+      show('receiver-alert',!allowed);
+      error('');await check();
+    }catch(e){error(messageOf(e));}
+    finally{button.disabled=false;}
+  }
+
+  $('receiver-consent-confirm').addEventListener('click',confirmElderConsent);
+  $('receiver-alert').addEventListener('click',enableBell);
+  $('receiver-answer').addEventListener('click',answer);
+  $('receiver-decline').addEventListener('click',decline);
+  $('receiver-sound').addEventListener('click',unlockSpeaker);
+  $('receiver-mute').addEventListener('click',toggleMute);
+  $('receiver-hangup').addEventListener('click',hangup);
+
+  if(!/^[0-9a-f]{64}$/.test(token)){
+    title('연결 링크가 필요해요','보호자에게 웹전화 연결 링크를 받아 주세요.');
+    show('receiver-alert',false);
+    return;
+  }
+  sessionStorage.setItem('raj.receiver.token',token);
+  sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
+  sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
+  check();
+  setInterval(()=>{if(!document.hidden)check();},3500);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)stopBell();
+    else{
+      if(phase==='ringing')beginBell();
+      check();
+    }
+  });
 })();

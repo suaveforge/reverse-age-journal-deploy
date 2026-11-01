@@ -15,6 +15,55 @@
     homeReturnTimer=setTimeout(()=>{window.location.replace('./');},1800);
   }
   const bellNotes=new Set();
+
+  // The original ONTALK native/PWA model: one-time permission and persistent
+  // OS notifications. SIP/RTP is not kept running in an iOS browser background.
+  let pushRegistration=null;
+  function beginNotificationPermission(){
+    if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))
+      return Promise.resolve('unsupported');
+    if(Notification.permission==='default'){
+      try{return Notification.requestPermission();}catch(_){return Promise.resolve('denied');}
+    }
+    return Promise.resolve(Notification.permission);
+  }
+  function base64ToBytes(key){
+    const clean=key.replace(/-/g,'+').replace(/_/g,'/');
+    const raw=atob(clean+'='.repeat((4-clean.length%4)%4));
+    return Uint8Array.from(raw,c=>c.charCodeAt(0));
+  }
+  async function registerBackgroundReceiver(permission){
+    if(permission!=='granted'||!('serviceWorker' in navigator)||!('PushManager' in window))return false;
+    const reg=pushRegistration||await navigator.serviceWorker.register('./service-worker.js?v=1',{scope:'/'});
+    pushRegistration=reg;
+    const worker=reg.active||reg.waiting||reg.installing;
+    if(worker)worker.postMessage({type:'RAJ_RECEIVER_TOKEN',token});
+    const response=await fetch(BASE+'/api/pilot/receiver/push/public-key',{cache:'no-store'});
+    if(!response.ok)throw Error('수신 알림 설정을 읽지 못했습니다.');
+    const conf=await response.json();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,applicationServerKey:base64ToBytes(conf.public_key)
+    });
+    const saved=await fetch(BASE+'/api/pilot/receiver/push/subscribe',{
+      method:'POST',headers:{'X-RAJ-RECEIVER-TOKEN':token,'Content-Type':'application/json'},
+      body:JSON.stringify({subscription:sub.toJSON()})
+    });
+    if(!saved.ok)throw Error('수신 알림 등록에 실패했습니다.');
+    return true;
+  }
+  async function setupExistingPush(){
+    if(!('serviceWorker' in navigator))return;
+    try{
+      const reg=await navigator.serviceWorker.register('./service-worker.js?v=1',{scope:'/'});
+      pushRegistration=reg;
+      const active=reg.active||reg.waiting||reg.installing;
+      active?.postMessage({type:'RAJ_RECEIVER_TOKEN',token});
+      if('Notification' in window&&Notification.permission==='granted')
+        await registerBackgroundReceiver('granted');
+    }catch(_){ /* The page still supports foreground calls. */ }
+  }
+
   const title=(heading,note)=>{
     $('receiver-title').textContent=heading;
     $('receiver-note').textContent=note||'';
@@ -85,8 +134,10 @@
     navigator.vibrate?.([250,120,250]);
   }
   async function enableBell(){
+    const permission=beginNotificationPermission();
     try{
       const ok=await unlockBell();
+      registerBackgroundReceiver(await permission).catch(()=>{});
       if(!ok)throw Error('오디오가 차단돼 있습니다.');
       if(phase==='ringing')beginBell();
       else{
@@ -354,9 +405,11 @@
     }
     const button=$('receiver-consent-confirm');button.disabled=true;
     // Start resume() during this user gesture: Safari does not grant it after fetch.
+    const notificationPermission=beginNotificationPermission();
     const unlock=unlockBell().catch(()=>false);
     try{
       await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
+      await registerBackgroundReceiver(await notificationPermission).catch(()=>false);
       const allowed=await unlock;
       show('receiver-consent-panel',false);
       show('receiver-alert',!allowed);
@@ -379,6 +432,7 @@
     return;
   }
   sessionStorage.setItem('raj.receiver.token',token);
+  setupExistingPush();
   sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
   sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
   check();

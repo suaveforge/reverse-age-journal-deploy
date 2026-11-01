@@ -62,6 +62,8 @@
   function showProfile(data){
     if(!data?.subject)return;
     const person=data.subject;
+    $('ops-consent-status').hidden=false;
+    $('ops-consent-status').textContent=person.participant_consent && person.recurring_consent ? '동의 확인됨' : '어르신 동의 확인 필요';
     $('ops-edit-name').value=person.name||'';
     $('ops-edit-phone').value=person.phone||'';
     $('ops-edit-family').value=person.family_phone||'';
@@ -137,7 +139,7 @@
     const blank=document.createElement('option');
     blank.textContent='어르신 선택';blank.value='';picker.append(blank);
     for(const s of subjects){const option=document.createElement('option');
-      option.value=s.id;option.textContent=s.name;picker.append(option);}
+      option.value=s.id;option.textContent=s.name+(s.consent_confirmed?'':' · 동의 대기');picker.append(option);}
     if(!subjects.some(x=>x.id===selected))selected=subjects[0]?.id||'';
     picker.value=selected;
     if(!selected)creating=true;
@@ -154,7 +156,7 @@
     text('ops-script','어르신을 선택하면 대화 안내가 나타납니다.');
     text('ops-previous','');
     $('ops-appointments').replaceChildren();
-    if(!selected)return;
+    if(!selected){$('ops-consent-status').hidden=true;return;}
     const info=await request('/subjects/'+encodeURIComponent(selected));
     showProfile(info);
     const trials=(info.credit_history||[]).filter(x=>x.kind==='TRIAL')

@@ -52,10 +52,12 @@
   }
   async function registerBackgroundReceiver(permission){
     if(permission!=='granted'){
+      reportSipDiagnostic('PUSH_FAILED',permission||'unknown');
       pushFeedback(permission==='denied'?'설정에서 알림을 허용해야 전화가 옵니다.':pushUnavailableText());
       return false;
     }
     if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+      reportSipDiagnostic('PUSH_FAILED','unsupported');
       pushFeedback(pushUnavailableText());return false;
     }
     await navigator.serviceWorker.register('./service-worker.js?v=3-ontalk-sip',{scope:'/'});
@@ -74,7 +76,8 @@
       method:'POST',headers:{'X-RAJ-RECEIVER-TOKEN':token,'Content-Type':'application/json'},
       body:JSON.stringify({subscription:sub.toJSON()})
     });
-    if(!saved.ok)throw Error('수신 알림 등록에 실패했습니다.');
+    if(!saved.ok){reportSipDiagnostic('PUSH_FAILED','http_'+saved.status);throw Error('수신 알림 등록에 실패했습니다.');}
+    reportSipDiagnostic('PUSH_REGISTERED');
     pushFeedback('');
     return true;
   }
@@ -88,7 +91,10 @@
       active?.postMessage({type:'RAJ_RECEIVER_TOKEN',token});
       if('Notification' in window&&Notification.permission==='granted')
         await registerBackgroundReceiver('granted');
-    }catch(_){ /* The page still supports foreground calls. */ }
+    }catch(e){
+      reportSipDiagnostic('PUSH_FAILED',e?.name||'background');
+      pushFeedback('잠금화면 알림 연결 오류: '+messageOf(e));
+    }
   }
 
   const title=(heading,note)=>{
@@ -98,6 +104,16 @@
   const show=(id,visible)=>{$(id).hidden=!visible;};
   const error=message=>{show('receiver-error',!!message);$('receiver-error').textContent=message||'';};
   const messageOf=e=>String(e?.message||e||'연결 오류').replace(/[<>{}]/g,'');
+  let lastSipDiagnostic='';
+  function reportSipDiagnostic(state,detail=''){
+    const clean=String(detail||'').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,45);
+    if(lastSipDiagnostic===state+'|'+clean)return;
+    lastSipDiagnostic=state+'|'+clean;
+    fetch(BASE+'/api/pilot/receiver/sip/client-state',{
+      method:'POST',headers:{'X-RAJ-RECEIVER-TOKEN':token,'Content-Type':'application/json'},
+      body:JSON.stringify({state,detail:clean}),cache:'no-store',keepalive:true
+    }).catch(()=>{});
+  }
   function sipState(message='',retry=false){
     const label=$('receiver-sip-status'),button=$('receiver-reconnect');
     if(label){label.textContent=message;label.hidden=!message;}
@@ -555,21 +571,27 @@
     }finally{button.disabled=false;}
   }
   async function initializeAsteriskSip(force=false){
-    if(active||incomingSip||sipStarting||!window.JsSIP)return;
+    if(active||incomingSip||sipStarting)return;
+    if(!window.JsSIP){
+      sipState('통화 프로그램을 불러오지 못했습니다. 자동 재연결 중입니다.',true);
+      reportSipDiagnostic('JS_MISSING');
+      queueSipReconnect();
+      return;
+    }
     if(sipUA&&!force)return;
     if(force&&sipUA){try{sipUA.stop();}catch(_){}sipUA=null;sipRegistered=false;}
-    sipStarting=true;sipState('통화 서버 연결 중');
+    sipStarting=true;sipState('통화 서버 연결 중');reportSipDiagnostic('SETUP_STARTED');
     try{
       const response=await fetch(BASE+'/api/pilot/receiver/sip/setup',{
         method:'POST',headers:{'X-RAJ-RECEIVER-TOKEN':token}
       });
-      if(response.status===409){sipState('');return;}
-      if(!response.ok)throw Error('SIP_SETTINGS_'+response.status);
+      if(response.status===409){sipState('');reportSipDiagnostic('CONSENT_PENDING');return;}
+      if(!response.ok){reportSipDiagnostic('SETUP_HTTP_ERROR',String(response.status));throw Error('SIP_SETTINGS_'+response.status);}
       const cfg=await response.json();
       sipMode=cfg.mode||'LEGACY';
       sipConfigurationReady=Boolean(cfg.ready);
       if(!cfg.ready||!cfg.sip_uri||!cfg.sip_secret){
-        sipState('통화 서버 내선 준비 중',true);queueSipReconnect();return;
+        sipState('통화 서버 내선 준비 중',true);reportSipDiagnostic('SIP_NOT_PROVISIONED');queueSipReconnect();return;
       }
       const socket=new window.JsSIP.WebSocketInterface(cfg.websocket_url);
       const ua=new window.JsSIP.UA({
@@ -577,28 +599,49 @@
         register:true,register_expires:120,session_timers:false,display_name:'기쁜사이'
       });
       sipUA=ua;
-      ua.on('connected',()=>{if(sipUA===ua)sipState('통화 서버 등록 중');});
+      reportSipDiagnostic('WS_STARTING');
+      const watchdog=setTimeout(()=>{
+        if(sipUA===ua&&!sipRegistered){
+          reportSipDiagnostic('WS_TIMEOUT');
+          sipState('통화 서버 응답이 없습니다. 자동 재연결 중입니다.',true);
+          queueSipReconnect();
+        }
+      },12000);
+      const stopWatchdog=()=>clearTimeout(watchdog);
+      ua.on('connected',()=>{
+        if(sipUA===ua){reportSipDiagnostic('WS_CONNECTED');sipState('통화 서버 등록 중');}
+      });
       ua.on('registered',()=>{
         if(sipUA!==ua)return;
-        sipRegistered=true;
+        stopWatchdog();sipRegistered=true;reportSipDiagnostic('SIP_REGISTERED');
         if(sipRetryTimer){clearTimeout(sipRetryTimer);sipRetryTimer=0;}
         sipState('');
       });
       ua.on('unregistered',()=>{
         if(sipUA!==ua)return;
-        sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);queueSipReconnect();
+        stopWatchdog();sipRegistered=false;reportSipDiagnostic('SIP_UNREGISTERED');
+        sipState('통화 서버 연결이 끊겼습니다.',true);queueSipReconnect();
       });
-      ua.on('registrationFailed',()=>{
+      ua.on('registrationFailed',event=>{
         if(sipUA!==ua)return;
-        sipRegistered=false;sipState('통화 서버 등록에 실패했습니다.',true);queueSipReconnect();
+        stopWatchdog();sipRegistered=false;
+        reportSipDiagnostic('SIP_REG_FAILED',event?.cause||'unknown');
+        sipState('통화 서버 등록에 실패했습니다.',true);queueSipReconnect();
       });
-      ua.on('disconnected',()=>{
+      ua.on('disconnected',event=>{
         if(sipUA!==ua)return;
-        sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);queueSipReconnect();
+        stopWatchdog();sipRegistered=false;
+        reportSipDiagnostic('WS_DISCONNECTED',event?.cause||event?.code||'unknown');
+        sipState('통화 서버 연결이 끊겼습니다.',true);queueSipReconnect();
       });
       ua.on('newRTCSession',receiveSipSession);
       ua.start();
-    }catch(_){sipRegistered=false;sipState('통화 서버 연결에 실패했습니다.',true);queueSipReconnect();}
+    }catch(e){
+      sipRegistered=false;
+      reportSipDiagnostic('JS_ERROR',e?.name||'failed');
+      sipState('통화 서버 연결 실패: '+messageOf(e),true);
+      queueSipReconnect();
+    }
     finally{sipStarting=false;}
   }
   async function answerViaAsterisk(){
@@ -795,6 +838,7 @@
     return;
   }
   sessionStorage.setItem('raj.receiver.token',token);
+  reportSipDiagnostic('PAGE_LOADED');
   setupExistingPush();
   initializeAsteriskSip();
   navigator.serviceWorker?.addEventListener('message',event=>{

@@ -10,6 +10,7 @@
   let durationTimer=0, activityTimer=0, callStartedAt=0, lastVoiceState='', speakerNeedsTap=false;
   let bellContext=null, bellOutput=null, bellTimer=0, bellAllowed=false;
   let sipUA=null,sipRegistered=false,sipSession=null,sipAudio=null,sipStarting=false;
+  let sipRetryTimer=0;
   let sipMode='LEGACY',incomingSip=null,pendingSip=null,sipAudioWatch=0,sipAnsweredPosted=false;
   let sipBoundPeers=new WeakSet(),sipConfigurationReady=false;
   let notificationAnswerId=new URLSearchParams(location.search).get('action')==='answer'
@@ -101,6 +102,14 @@
     const label=$('receiver-sip-status'),button=$('receiver-reconnect');
     if(label){label.textContent=message;label.hidden=!message;}
     if(button)button.hidden=!retry;
+  }
+  function queueSipReconnect(){
+    if(sipRetryTimer||sipRegistered||active||incomingSip)return;
+    sipRetryTimer=setTimeout(()=>{
+      sipRetryTimer=0;
+      if(!sipRegistered&&!active&&!incomingSip&&!sipStarting)
+        initializeAsteriskSip(true).catch(()=>{});
+    },5000);
   }
   function maybeAnswerNotification(){
     if(!notificationAnswerId||phase!=='ringing'||ringId!==notificationAnswerId)return;
@@ -560,7 +569,7 @@
       sipMode=cfg.mode||'LEGACY';
       sipConfigurationReady=Boolean(cfg.ready);
       if(!cfg.ready||!cfg.sip_uri||!cfg.sip_secret){
-        sipState('통화 서버 내선 준비 중',true);setTimeout(()=>initializeAsteriskSip().catch(()=>{}),5000);return;
+        sipState('통화 서버 내선 준비 중',true);queueSipReconnect();return;
       }
       const socket=new window.JsSIP.WebSocketInterface(cfg.websocket_url);
       const ua=new window.JsSIP.UA({
@@ -569,13 +578,27 @@
       });
       sipUA=ua;
       ua.on('connected',()=>{if(sipUA===ua)sipState('통화 서버 등록 중');});
-      ua.on('registered',()=>{if(sipUA===ua){sipRegistered=true;sipState('');}});
-      ua.on('unregistered',()=>{if(sipUA===ua){sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);}});
-      ua.on('registrationFailed',()=>{if(sipUA===ua){sipRegistered=false;sipState('통화 서버 등록에 실패했습니다.',true);}});
-      ua.on('disconnected',()=>{if(sipUA===ua){sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);}});
+      ua.on('registered',()=>{
+        if(sipUA!==ua)return;
+        sipRegistered=true;
+        if(sipRetryTimer){clearTimeout(sipRetryTimer);sipRetryTimer=0;}
+        sipState('');
+      });
+      ua.on('unregistered',()=>{
+        if(sipUA!==ua)return;
+        sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);queueSipReconnect();
+      });
+      ua.on('registrationFailed',()=>{
+        if(sipUA!==ua)return;
+        sipRegistered=false;sipState('통화 서버 등록에 실패했습니다.',true);queueSipReconnect();
+      });
+      ua.on('disconnected',()=>{
+        if(sipUA!==ua)return;
+        sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);queueSipReconnect();
+      });
       ua.on('newRTCSession',receiveSipSession);
       ua.start();
-    }catch(_){sipRegistered=false;sipState('통화 서버 연결에 실패했습니다.',true);}
+    }catch(_){sipRegistered=false;sipState('통화 서버 연결에 실패했습니다.',true);queueSipReconnect();}
     finally{sipStarting=false;}
   }
   async function answerViaAsterisk(){

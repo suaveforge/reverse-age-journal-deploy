@@ -76,14 +76,22 @@ self.addEventListener('notificationclick',e=>{
    }).catch(()=>{});
    return;
   }
-  const url='/receive.html#'+token;
+  const answering=e.action==='answer'&&/^ring_[a-f0-9]{32}$/.test(data.ring_id||'');
+  const url=answering
+    ?'/receive.html?action=answer&ring='+encodeURIComponent(data.ring_id)+'#'+token
+    :'/receive.html#'+token;
   const windows=await clients.matchAll({type:'window',includeUncontrolled:true});
   for(const w of windows){
-    if(new URL(w.url).origin===self.location.origin){
-     if('navigate' in w){try{await w.navigate(url);}catch(_){}}
-     if('focus' in w)await w.focus();
-     return;
+    if(new URL(w.url).origin!==self.location.origin)continue;
+    // Never navigate an existing SIP receiver: navigation kills its live WSS session.
+    if(new URL(w.url).pathname==='/receive.html'){
+      if('focus' in w)await w.focus();
+      if(answering)w.postMessage({type:'RAJ_RECEIVER_ANSWER',ringId:data.ring_id});
+      return;
     }
+    if('navigate' in w){try{await w.navigate(url);}catch(_){}}
+    if('focus' in w)await w.focus();
+    return;
   }
   await clients.openWindow(url);
  })());

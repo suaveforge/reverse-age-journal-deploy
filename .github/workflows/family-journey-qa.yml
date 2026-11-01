@@ -108,6 +108,22 @@ jobs:
                   assert not exceptions,exceptions
                   print('RAJ_BENCHMARKED_FAMILY_'+('DESKTOP' if width>600 else 'MOBILE')+'=PASS',flush=True)
                   page.close()
+              # A deployed page against an older backend must stop BEFORE collecting
+              # the guardian's private contact details, with a specific outage notice.
+              blocked=browser.new_page(viewport={'width':390,'height':844})
+              def old_api(route):
+                  route.fulfill(status=404,content_type='application/json',
+                      body='{"detail":"Not Found"}',
+                      headers={'access-control-allow-origin':'*',
+                               'access-control-allow-headers':'*',
+                               'access-control-allow-methods':'GET, POST, OPTIONS'})
+              blocked.route('**/api/pilot/family/onboarding',old_api)
+              blocked.goto('http://127.0.0.1:18765/',wait_until='networkidle')
+              blocked.locator('#family-start').click()
+              expect(blocked.locator('#family-error')).to_contain_text('현재 어르신 등록 서비스를 이용할 수 없습니다.')
+              assert blocked.locator('#family-name').count()==0
+              print('RAJ_STALE_API_BLOCKS_BEFORE_CONTACT_COLLECTION=PASS',flush=True)
+              blocked.close()
               browser.close()
           print('RAJ_NO_PRECONSENT_PAYMENT_NO_FAKE_CALL=PASS')
           PY

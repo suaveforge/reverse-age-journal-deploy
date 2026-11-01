@@ -145,13 +145,19 @@
     finally{if(action)action.disabled=false;}
   }
   async function plans(){
-    page('이용권 선택','<div id="family-plans"></div>'+error,false);
+    page('통화 방식 선택',
+      button('웹전화 체험하기','family-web-trial')+
+      '<div id="family-plans"></div>'+error,false);
+    document.getElementById('family-web-trial').onclick=()=>{
+      if(!document.querySelector('.page').classList.contains('counselor-mode'))document.getElementById('admin-entry')?.click();
+      document.getElementById('pilot-access')?.scrollIntoView({behavior:'smooth',block:'start'});
+    };
     const box=document.getElementById('family-plans');
     try{
       const data=await request('/payment-ready');
       if(state.step!==4)return;
       if(!data.ready||!data.packages?.length){
-        tell('현재 이용권을 구매할 수 없습니다.');return;
+        box.textContent='이용권 구매는 준비 중입니다.';return;
       }
       box.className='family-choices';
       for(const item of data.packages){

@@ -397,6 +397,7 @@
     const ring=result.ring;
     show('receiver-incoming',false);
     if(ring?.status==='SIP_DIALING'||ring?.status==='SIP_RINGING'){
+      if(ring.status==='SIP_RINGING')reportSipDiagnostic('SIP_INVITE_WAIT');
       stopBell();phase='idle';
       show('receiver-alert',false);
       title('AI 전화 연결 중','잠시 후 전화가 울립니다.');
@@ -408,7 +409,8 @@
       document.body.classList.add('ringing');
       show('receiver-incoming',true);
       show('receiver-alert',!bellAllowed);
-      beginBell();
+      beginBell();notifySipRinging();
+      reportSipDiagnostic(bellAllowed?'WEB_RING_VISIBLE':'WEB_RING_SILENT');
       title('전화가 왔어요','전화 받기를 눌러 주세요.');
       maybeAnswerNotification();
       return;
@@ -492,7 +494,9 @@
   async function receiveSipSession(data){
     const session=data?.session;
     if(!session||data.originator!=='remote')return;
+    reportSipDiagnostic('SIP_INBOUND_RECEIVED');
     if(incomingSip||pendingSip||active||phase==='connecting'){
+      reportSipDiagnostic('SIP_INBOUND_REJECTED','busy');
       terminateSip(session);return;
     }
     pendingSip=session;
@@ -503,6 +507,7 @@
       if(pendingSip!==session)return;
       const remoteUser=String(session.remote_identity?.uri?.user||'');
       if(status.consent_required||status.ring?.status!=='SIP_RINGING'||remoteUser!=='7777'){
+        reportSipDiagnostic('SIP_INBOUND_REJECTED',status.consent_required?'consent':status.ring?.status!=='SIP_RINGING'?'ring_state':'wrong_caller');
         terminateSip(session,480);return;
       }
       incomingSip=session;sipSession=session;ringId=status.ring.id;
@@ -515,6 +520,7 @@
       session.on('unmuted',()=>{micMuted=false;if(active)updateMicActivity();});
       attachSipMedia(session);
       phase='ringing';show('receiver-incoming',true);
+      reportSipDiagnostic('SIP_INBOUND_RINGING');
       document.body.classList.add('ringing');
       title('전화가 왔어요','전화 받기를 눌러 주세요.');
       beginBell();notifySipRinging();maybeAnswerNotification();

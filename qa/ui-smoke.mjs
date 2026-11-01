@@ -103,5 +103,21 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   if(uncaught.length)throw Error(label+' page JS errors '+uncaught.join('; '));
   await receiver.close();
 }
+// Production GitHub Pages must match the approved layout; this is read-only.
+for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
+  const live=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  await live.goto('https://reverse-age-journal.suaveforge.com/?ui-qa=20261101-unified04',
+    {waitUntil:'domcontentloaded',timeout:24000});
+  await live.locator('.family-opening').waitFor({state:'visible',timeout:14000});
+  const actual=await live.evaluate(()=>{
+    const leaf=document.querySelector('.family-opening-leaf').getBoundingClientRect();
+    return {leafWidth:leaf.width,leafHeight:leaf.height,
+      title:document.querySelector('.family-opening-heading').textContent};
+  });
+  if(actual.leafWidth>160||actual.leafHeight>170||!actual.title.includes('내일의 일기가 됩니다'))
+    throw Error('Live Pages differs from locked design: '+JSON.stringify(actual));
+  await audit(live,'09-production-home-'+label,width,height);
+  await live.close();
+}
 await browser.close();
-console.log('UI_QA_PASS '+count+' screenshots; dynamic authenticated states are layout previews only; no live call, payment, or sensitive account interaction.');
+console.log('UI_QA_PASS '+count+' screenshots including LIVE Pages; authenticated counselor and receiver states are local layout previews only; no paid call or payment.');

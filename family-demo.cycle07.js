@@ -8,7 +8,7 @@
   const KEY='raj.family.walkthrough.v2';
   const blank=()=>({
     step:0, family:'',guardianPhone:'',elder:'',phone:'',relationship:'부모님',
-    preferredHour:14,interests:'',registered:false,packageCode:'',price:0,
+    preferredHour:14,preferredMinute:0,interests:'',registered:false,packageCode:'',price:0,
     credits:0,orderId:'',when:'',booked:false,phoneReady:false,smsStatus:'',
     guestToken:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','')
   });
@@ -115,7 +115,13 @@
   async function submitElder(){
     const elder=document.getElementById('family-elder').value.trim();
     const phone=phoneDigits(document.getElementById('family-phone').value);
-    const hour=Number(document.getElementById('family-hour').value);
+    const selectedTime=document.getElementById('family-hour').value;
+    const matched=/^([0-9]{2}):([0-9]{2})$/.exec(selectedTime);
+    const hour=matched?Number(matched[1]):NaN;
+    const minute=matched?Number(matched[2]):NaN;
+    if(!Number.isInteger(hour)||hour<9||hour>19||!Number.isInteger(minute)||minute<0||minute>59){
+      tell('통화 시간을 오전 9시부터 오후 7시 59분 사이로 지정해 주세요.');return;
+    }
     if(!elder||phone.length<10||phone.length>11){tell('어르신 이름과 전화번호를 확인해 주세요.');return;}
     if(phone===state.guardianPhone){tell('어르신 전화번호를 따로 입력해 주세요.');return;}
     if(!document.getElementById('family-information-consent').checked){
@@ -128,11 +134,11 @@
         guest_token:state.guestToken,guardian_name:state.family,
         guardian_phone:state.guardianPhone,elder_name:elder,elder_phone:phone,
         relationship:document.getElementById('family-relationship').value,
-        preferred_hour:hour,interests:document.getElementById('family-interests').value.trim(),
+        preferred_hour:hour,preferred_minute:minute,interests:document.getElementById('family-interests').value.trim(),
          share_with_family:document.getElementById('family-share-request').checked
       })});
       state.elder=elder;state.phone=phone;state.relationship=document.getElementById('family-relationship').value;
-      state.preferredHour=hour;state.registered=true;state.smsStatus=registration.sms_status||'';move(3);
+      state.preferredHour=hour;state.preferredMinute=minute;state.registered=true;state.smsStatus=registration.sms_status||'';move(3);
     }catch(e){tell(e.message);action.disabled=false;}
   }
   function smsMessage(status){
@@ -313,10 +319,7 @@
       document.getElementById('family-guardian-form').onsubmit=e=>{e.preventDefault();submitGuardian();};
       document.getElementById('family-next').onclick=submitGuardian;
     }else if(state.step===2){
-      const times=Array.from({length:11},(_,i)=>{
-        const hour=9+i;return '<option value="'+hour+'" '+(state.preferredHour===hour?'selected':'')+'>'+
-          (hour<12?'오전 '+hour+'시':hour===12?'오후 12시':'오후 '+(hour-12)+'시')+'</option>';
-      }).join('');
+      const preferredTime=String(state.preferredHour).padStart(2,'0')+':'+String(state.preferredMinute||0).padStart(2,'0');
       page('어르신 등록','<form id="family-elder-form" class="family-form">'+
         '<label for="family-elder">어르신 이름</label>'+
         '<input id="family-elder" maxlength="60" autocomplete="off" value="'+esc(state.elder)+'" required>'+
@@ -326,7 +329,7 @@
         '<select id="family-relationship">'+['부모님','조부모님','배우자','기타'].map(v=>
           '<option value="'+v+'" '+(state.relationship===v?'selected':'')+'>'+v+'</option>').join('')+'</select>'+
         '<label for="family-hour">통화 희망 시간</label>'+
-        '<select id="family-hour">'+times+'</select>'+
+        '<input id="family-hour" type="time" min="09:00" max="19:59" step="60" value="'+preferredTime+'" required>'+
         '<details class="family-more"><summary>대화 주제 (선택)</summary>'+
         '<textarea id="family-interests" maxlength="220" rows="2" placeholder="취미나 관심사">'+esc(state.interests)+'</textarea></details>'+
         '<label class="family-consent"><input id="family-share-request" type="checkbox">'+

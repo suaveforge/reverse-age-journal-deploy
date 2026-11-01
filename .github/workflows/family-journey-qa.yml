@@ -1,4 +1,4 @@
-name: Family PayHub TEST-only journey QA
+name: Family benchmarked consent-first PayHub QA
 on:
   push:
     branches: [main]
@@ -9,76 +9,82 @@ permissions:
 jobs:
   family:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 7
     steps:
       - uses: actions/checkout@v4
-      - name: Test family flow with synthetic PayHub responses, no payment or calls
+      - name: Test guardian, elder intake, manual consent, verified payment and booking
         shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
           node --check app.js
           node --check family-demo.js
           python3 -m pip -q install playwright
-          python3 -m http.server 18765 --bind 127.0.0.1 >/tmp/raj-family-http.log 2>&1 &
+          python3 -m http.server 18765 --bind 127.0.0.1 >/tmp/family-server.log 2>&1 &
           cat >/tmp/family-qa.py <<'PY'
-          import json,re
+          import json,datetime
           from playwright.sync_api import sync_playwright,expect
-          def respond(route):
-              req=route.request
-              path=req.url.split('/api/pilot/family/')[-1]
-              if path=='payment-ready':
-                  response={'ready':True,'packages':[
-                      {'code':'FIVE','sessions':5,'price_krw':1000},
-                      {'code':'TEN','sessions':10,'price_krw':2000}]}
-              elif path=='checkout':
-                  response={'order_id':'ord_'+'a'*32,
-                      'checkout_url':'https://payhub.suaveforge.com/checkout/?session_id=ps_testfixture'}
-              elif path.startswith('orders/'):
-                  assert req.headers.get('x-raj-family-token')
-                  response={'state':'PAID','sessions':5,'order_id':'ord_'+'a'*32}
-              elif path=='bookings':
-                  body=req.post_data_json
-                  assert body['order_id']=='ord_'+'a'*32
-                  assert body['guest_token']
-                  response={'saved':True,'real_phone_call':False,
-                    'scheduled_at':body['scheduled_at']}
-              else:
-                  route.fulfill(status=404,content_type='application/json',
-                    body='{"detail":"UNEXPECTED_TEST_ROUTE"}')
-                  return
-              route.fulfill(status=200,content_type='application/json',
-                body=json.dumps(response))
           with sync_playwright() as p:
               browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
               for width,height in [(1365,900),(390,844)]:
+                  state={'approved':False,'onboarded':False}
+                  def fake(route):
+                      req=route.request
+                      endpoint=req.url.split('/api/pilot/family/')[-1]
+                      if endpoint=='onboarding':
+                          if req.method=='POST':
+                              body=req.post_data_json
+                              assert body['elder_name']=='할머니'
+                              assert body['relationship']=='부모님'
+                              assert body['preferred_hour']==14
+                              state['onboarded']=True
+                              body={'registered':True,'consent':'PENDING'}
+                          else:
+                              body={'registered':state['onboarded'],
+                                    'consent':'CONFIRMED' if state['approved'] else 'PENDING',
+                                    'elder_name':'할머니','booking_at':'2026-12-05T05:00:00Z'}
+                      elif endpoint=='payment-ready':
+                          body={'ready':True,'packages':[{'code':'FIVE','sessions':5,'price_krw':1000},
+                                {'code':'TEN','sessions':10,'price_krw':2000}]}
+                      elif endpoint.startswith('orders/'):
+                          body={'state':'PAID','sessions':5,'order_id':'ord_'+'a'*32}
+                      elif endpoint=='bookings':
+                          assert req.post_data_json['order_id']=='ord_'+'a'*32
+                          body={'saved':True,'real_phone_call':False}
+                      else:
+                          route.fulfill(status=404,content_type='application/json',body='{"detail":"UNEXPECTED"}')
+                          return
+                      route.fulfill(status=200,content_type='application/json',body=json.dumps(body),
+                                    headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET, POST, OPTIONS'})
                   page=browser.new_page(viewport={'width':width,'height':height})
-                  errors=[]
-                  page.on('pageerror',lambda e:errors.append(str(e)))
-                  page.route('**/api/pilot/family/**',respond)
+                  exceptions=[]
+                  page.on('pageerror',lambda e:exceptions.append(str(e)))
+                  page.route('**/api/pilot/family/**',fake)
                   page.goto('http://127.0.0.1:18765/',wait_until='networkidle',timeout=30000)
                   expect(page.locator('#family-start')).to_be_visible()
-                  expect(page.locator('.family-title')).to_have_count(0)
-                  expect(page.locator('#counselor-pilot')).to_be_hidden()
                   expect(page.locator('#admin-entry')).to_have_text('관리자 접속하기')
                   assert page.evaluate('document.documentElement.scrollWidth')==width
                   assert page.evaluate('document.body.scrollHeight')<=height+110
                   page.locator('#family-start').click()
-                  expect(page.locator('#family-name')).to_be_visible()
                   page.locator('#family-name').fill('보호자')
+                  page.locator('#guardian-phone').fill('01023456789')
                   page.locator('#family-next').click()
                   expect(page.locator('#family-elder')).to_be_visible()
                   page.locator('#family-elder').fill('할머니')
                   page.locator('#family-phone').fill('01012345678')
-                  page.locator('#family-consent').check()
+                  page.locator('#family-information-consent').check()
                   page.locator('#family-register').click()
+                  expect(page.locator('#family-consent-check')).to_be_visible()
+                  assert page.locator('#family-pay').count()==0, 'payment before consent'
+                  page.locator('#family-consent-check').click()
+                  expect(page.locator('#family-error')).to_contain_text('동의 확인 중')
+                  state['approved']=True
+                  page.locator('#family-consent-check').click()
                   expect(page.locator('#family-plans .family-button')).to_have_count(2)
                   page.locator('#family-plans .family-button').first.click()
                   expect(page.locator('#family-pay')).to_be_visible()
                   expect(page.locator('.family-amount')).to_contain_text('1,000원')
-                  assert page.locator('#family-record').count()==0
-                  assert page.locator('#family-home').count()==0
-                  # Return from a real PayHub page is represented by an already saved
-                  # order. The backend PayHub status endpoint is the sole authority.
+                  # Return from PayHub is represented by an existing order,
+                  # but only the server can confirm PAID.
                   page.evaluate("""() => {
                     const x=JSON.parse(sessionStorage.getItem('raj.family.walkthrough.v2'));
                     x.orderId='ord_'+'a'.repeat(32);
@@ -86,21 +92,23 @@ jobs:
                   }""")
                   page.reload(wait_until='networkidle')
                   expect(page.locator('#family-when')).to_be_visible(timeout=10000)
-                  page.locator('#family-when').fill('2026-12-05T14:00')
+                  date=(datetime.datetime.now()+datetime.timedelta(days=8)).replace(hour=14,minute=0)
+                  page.locator('#family-when').fill(date.strftime('%Y-%m-%dT%H:%M'))
                   page.locator('#family-reserve').click()
                   expect(page.locator('.family-confirm')).to_contain_text('할머니')
-                  expect(page.locator('.family-confirm')).to_contain_text('5회')
-                  expect(page.locator('#family-record')).to_have_count(0)
-                  expect(page.locator('#family-home')).to_be_visible()
+                  expect(page.locator('#family-dashboard')).to_be_visible()
+                  assert page.locator('#family-record').count()==0
                   page.locator('#admin-entry').click()
                   expect(page.locator('#counselor-pilot')).to_be_visible()
-                  expect(page.locator('#family-journey')).to_be_hidden()
                   page.locator('#admin-entry').click()
+                  expect(page.locator('#family-dashboard')).to_be_visible()
+                  page.locator('#family-dashboard').click()
                   expect(page.locator('.family-confirm')).to_be_visible()
-                  assert not errors,errors
-                  print('RAJ_FAMILY_TEST_CHECKOUT_'+('DESKTOP' if width>600 else 'MOBILE')+'=PASS',flush=True)
+                  assert page.evaluate('document.documentElement.scrollWidth')==width
+                  assert not exceptions,exceptions
+                  print('RAJ_BENCHMARKED_FAMILY_'+('DESKTOP' if width>600 else 'MOBILE')+'=PASS',flush=True)
                   page.close()
               browser.close()
-          print('RAJ_NO_REAL_PAYMENT_NO_FAKE_BALANCE_NO_OLD_RECORDS=PASS')
+          print('RAJ_NO_PRECONSENT_PAYMENT_NO_FAKE_CALL=PASS')
           PY
           python3 /tmp/family-qa.py

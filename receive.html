@@ -7,7 +7,7 @@
   <title>어르신 웹전화 | 기쁜사이</title>
   <link rel="stylesheet" href="./receive.css">
   <script defer src="./config.js"></script>
-  <script defer src="./receive.js"></script>
+  <script defer src="./receive.js?v=08"></script>
 </head>
 <body>
   <main class="receiver">
@@ -16,6 +16,7 @@
       <div class="signal" id="receiver-signal" aria-hidden="true">☎</div>
       <h1 id="receiver-title">연결 준비</h1>
       <p id="receiver-note">잠시만 기다려 주세요.</p>
+      <button id="receiver-alert" class="action secondary" type="button">벨소리 켜기</button>
       <div id="receiver-incoming" hidden>
         <button id="receiver-answer" class="action primary" type="button">전화 받기</button>
         <button id="receiver-decline" class="action secondary" type="button">거절</button>

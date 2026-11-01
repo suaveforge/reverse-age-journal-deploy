@@ -42,3 +42,103 @@ body{background:#fdfbf7;color:#003c28}
 .receiver .voice-panel,.receiver .voice-party{border-radius:22px}
 .receiver .voice-party{background:#fffefa}
 .receiver footer{color:#6c826d}
+
+
+/* Approved brand: senior phone experience, no ornamental UI. 2026-11-01 */
+body,.receiver{background:#fdfbf7;color:#003c28}
+.receiver{
+ width:100%;max-width:650px;min-height:100svh;
+ padding:clamp(21px,4vw,35px) clamp(21px,5vw,40px) 26px;
+}
+.receiver header{
+ align-items:center;gap:12px;padding:0 0 18px;
+ border-bottom:1px solid #e3ebde;
+}
+.receiver header strong{
+ font-size:clamp(30px,6.4vw,39px);font-weight:900;color:#004329;
+ letter-spacing:-.075em;
+}
+.receiver header small{font-size:clamp(15px,3.6vw,18px);color:#65806b}
+.receiver .center{
+ width:100%;max-width:570px;margin:auto;
+ justify-content:center;gap:12px;padding:32px 0 50px;
+}
+.receiver #receiver-signal{display:none!important}
+.receiver h1{
+ color:#003c28;font-size:clamp(37px,8.5vw,54px);
+ font-weight:900;letter-spacing:-.07em;line-height:1.3;
+ margin:0 0 5px;
+}
+.receiver #receiver-note{
+ color:#536c56;font-size:clamp(20px,4.6vw,26px);
+ font-weight:650;line-height:1.45;margin:0 0 20px;
+}
+.receiver .action{
+ display:block;min-height:clamp(78px,14vw,99px);
+ border:2px solid transparent;border-radius:999px;
+ padding:15px 23px;margin:8px 0;
+ font-size:clamp(26px,6.6vw,35px);font-weight:900;
+ letter-spacing:-.035em;
+ box-shadow:none;transition:none;
+}
+.receiver .action.primary{background:#055c38;border-color:#055c38;color:white}
+.receiver .action.secondary{
+ background:#fffefa;border:2px solid #bdd3c1;color:#075437;
+}
+.receiver .action.danger{background:#fff3f1;border:2px solid #c8877e;color:#923c34}
+.receiver .action:focus-visible{outline:3px solid #80b878;outline-offset:3px}
+.receiver #receiver-consent-panel{
+ width:100%;text-align:left;border:0;border-top:1px solid #d8e6d7;
+ margin-top:8px;padding-top:22px;
+}
+.receiver #receiver-consent-panel p{
+ color:#284735;font-size:clamp(18px,4.4vw,23px);
+ line-height:1.6;margin:0 0 22px;word-break:keep-all;
+}
+.receiver #receiver-consent-panel label{
+ display:flex!important;gap:15px;align-items:flex-start;min-height:49px;
+ margin:14px 0 27px!important;
+ color:#0f452c;font-size:clamp(19px,4.6vw,23px)!important;
+ font-weight:800;line-height:1.5;
+}
+.receiver #receiver-consent-check{
+ width:31px!important;height:31px!important;margin:3px 0 0;
+ flex:none;accent-color:#055c38;
+}
+.receiver #receiver-incoming{width:100%;margin:5px 0}
+.receiver #receiver-connected{gap:12px;margin:12px 0 0}
+.receiver #receiver-connected .action{min-height:72px}
+.receiver #receiver-voice{margin:16px 0 24px}
+.receiver .call-duration{
+ font-size:clamp(28px,7.3vw,40px);font-weight:800;color:#345744;
+ margin:0 0 24px;letter-spacing:-.025em;
+}
+.receiver .voice-participants{gap:13px}
+.receiver .voice-party{
+ min-height:148px;border:0;border-top:2px solid #d4e2d4;
+ border-bottom:2px solid #d4e2d4;border-radius:0!important;
+ background:transparent!important;padding:21px 3px;
+ gap:13px;
+}
+.receiver .voice-party.talking{
+ border-color:#358155;background:#f5f9ef!important;
+}
+.receiver .voice-party strong{font-size:clamp(31px,7.3vw,42px);color:#06432b}
+.receiver .voice-status{font-size:clamp(17px,4.5vw,23px);font-weight:750}
+.receiver .voice-bars i{background:#8aaa90}
+.receiver .voice-party.talking .voice-bars i{background:#438653}
+.receiver #receiver-error:not([hidden]){
+ font-size:clamp(18px,4.4vw,22px);line-height:1.55;
+ padding:12px 0;border-top:2px solid #c37c70;
+}
+.receiver #receiver-footer{display:none!important}
+@media(max-width:420px){
+ .receiver{padding:18px 21px 20px}
+ .receiver .center{padding:23px 0 34px}
+ .receiver h1{font-size:clamp(36px,10vw,44px)}
+ .receiver .voice-party{min-height:134px;padding:18px 2px}
+ .receiver .action{min-height:82px}
+}
+@media(prefers-reduced-motion:reduce){
+ .receiver .action{transition:none}
+}

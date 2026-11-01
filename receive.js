@@ -20,6 +20,17 @@
   // The original ONTALK native/PWA model: one-time permission and persistent
   // OS notifications. SIP/RTP is not kept running in an iOS browser background.
   let pushRegistration=null;
+  function pushFeedback(message){
+    const area=$('receiver-push-status');
+    if(area){area.textContent=message||'';area.hidden=!message;}
+  }
+  function pushUnavailableText(){
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent) &&
+       !window.navigator.standalone &&
+       !window.matchMedia('(display-mode: standalone)').matches)
+      return '아이폰은 이 웹사이트를 홈 화면에 추가한 뒤 알림을 허용해야 합니다.';
+    return '이 브라우저에서는 화면을 닫았을 때 전화 알림을 받을 수 없습니다.';
+  }
   function beginNotificationPermission(){
     if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))
       return Promise.resolve('unsupported');
@@ -34,8 +45,15 @@
     return Uint8Array.from(raw,c=>c.charCodeAt(0));
   }
   async function registerBackgroundReceiver(permission){
-    if(permission!=='granted'||!('serviceWorker' in navigator)||!('PushManager' in window))return false;
-    const reg=pushRegistration||await navigator.serviceWorker.register('./service-worker.js?v=1',{scope:'/'});
+    if(permission!=='granted'){
+      pushFeedback(permission==='denied'?'설정에서 알림을 허용해야 전화가 옵니다.':pushUnavailableText());
+      return false;
+    }
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+      pushFeedback(pushUnavailableText());return false;
+    }
+    await navigator.serviceWorker.register('./service-worker.js?v=2',{scope:'/'});
+    const reg=await navigator.serviceWorker.ready;
     pushRegistration=reg;
     const worker=reg.active||reg.waiting||reg.installing;
     if(worker)worker.postMessage({type:'RAJ_RECEIVER_TOKEN',token});
@@ -51,12 +69,14 @@
       body:JSON.stringify({subscription:sub.toJSON()})
     });
     if(!saved.ok)throw Error('수신 알림 등록에 실패했습니다.');
+    pushFeedback('');
     return true;
   }
   async function setupExistingPush(){
     if(!('serviceWorker' in navigator))return;
     try{
-      const reg=await navigator.serviceWorker.register('./service-worker.js?v=1',{scope:'/'});
+      await navigator.serviceWorker.register('./service-worker.js?v=2',{scope:'/'});
+      const reg=await navigator.serviceWorker.ready;
       pushRegistration=reg;
       const active=reg.active||reg.waiting||reg.installing;
       active?.postMessage({type:'RAJ_RECEIVER_TOKEN',token});
@@ -138,7 +158,7 @@
     const permission=beginNotificationPermission();
     try{
       const ok=await unlockBell();
-      registerBackgroundReceiver(await permission).catch(()=>{});
+      registerBackgroundReceiver(await permission).catch(()=>pushFeedback('전화 알림 연결에 실패했습니다.'));
       if(!ok)throw Error('오디오가 차단돼 있습니다.');
       if(phase==='ringing')beginBell();
       else{
@@ -508,7 +528,7 @@
     try{
       await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
       initializeAsteriskSip().catch(()=>{});
-      await registerBackgroundReceiver(await notificationPermission).catch(()=>false);
+      await registerBackgroundReceiver(await notificationPermission).catch(()=>{pushFeedback('전화 알림 연결에 실패했습니다.');return false;});
       const allowed=await unlock;
       show('receiver-consent-panel',false);
       show('receiver-alert',!allowed);

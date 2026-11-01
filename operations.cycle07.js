@@ -68,6 +68,7 @@
     const person=data.subject;
     $('ops-consent-status').hidden=false;
     $('ops-consent-status').textContent=person.participant_consent ? '통화 동의 확인됨' : '어르신 통화 동의 확인 필요';
+    $('ops-consent-status').dataset.kind=person.participant_consent?'confirmed':'pending';
     previousRecurringConsent=Boolean(person.recurring_consent);
     previousParticipantConsent=Boolean(person.participant_consent);
     previousSharingConsent=Boolean(person.family_notifications_consent);
@@ -418,7 +419,7 @@
   bind('ops-confirm-consent',confirmConsent);
   bind('ops-new-person',()=>{
     creating=!creating;
-    $('ops-new-person').textContent=creating?'닫기':'+ 어르신 추가';
+    $('ops-new-person').textContent=creating?'닫기':'어르신 추가';
     switchTab('info');
   });
   document.querySelectorAll('[data-ops-tab]').forEach(button=>{

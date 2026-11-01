@@ -55,6 +55,8 @@
   function setWorking(working){
     $("pilot-start").disabled=working||!operatorCode||!$("pilot-consent").checked||!window.RAJ_SELECTED_SUBJECT||!window.RAJ_CREDITS_AVAILABLE||active;
     $("pilot-stop").disabled=!active;
+    $("pilot-unmute").hidden=!active;
+    $("pilot-unmute").disabled=!active||!client;
     $("pilot-check").disabled=working||!currentCallId;
     $("pilot-sync").disabled=working||!currentCallId;
     $("pilot-draft").disabled=working||!currentCallId;
@@ -108,14 +110,15 @@
     show($("pilot-results"),false);
     status("통화를 연결하고 있습니다.");
     try{
-      // A real, billed Retell call is initiated by KIMSE Evidence API.
+      // Load the SDK BEFORE requesting the short-lived billable Retell access token.
+      // A failed import must never create a paid call.
+      const sdk=await import("https://esm.sh/retell-client-js-sdk@2.0.8");
       const data=await api("/calls",{method:"POST",body:JSON.stringify({consent:true,subject_id:window.RAJ_SELECTED_SUBJECT})});
       currentCallId=data.call_id;
       $("pilot-delete").hidden=false;
       sessionStorage.setItem("raj.evidence.pilot.call",currentCallId);
       $("pilot-call-id").textContent="통화 ID: "+currentCallId;
       show($("pilot-results"),true);
-      const sdk=await import("https://esm.sh/retell-client-js-sdk@2.0.8");
       client=new sdk.RetellWebClient();
       client.on("call_started",()=>{active=true;status("통화 중입니다. 이야기를 나눠 주세요.","ok");setWorking(false);});
       client.on("call_ready",()=>{active=true;status("통화 중입니다. 이야기를 나눠 주세요.","ok");setWorking(false);});
@@ -150,6 +153,20 @@
     client=null;
     setWorking(false);
     pollResult(0);
+  }
+  // iOS browsers may block remote agent audio after asynchronous call creation.
+  // This method is invoked directly from the user's own tap (no automatic playback).
+  function unlockPlayback(){
+    if(!client||!active)return;
+    if(typeof client.startAudioPlayback!=="function"){
+      status("이 브라우저에서는 스피커 재활성화를 지원하지 않습니다.","error");
+      return;
+    }
+    try{
+      Promise.resolve(client.startAudioPlayback())
+        .then(()=>status("통화 소리를 켰습니다.","ok"))
+        .catch(e=>status("스피커 활성화 오류: "+errorMessage(e),"error"));
+    }catch(e){status("스피커 활성화 오류: "+errorMessage(e),"error");}
   }
   function renderTranscript(data){
     const output=$("pilot-transcript");
@@ -319,6 +336,7 @@
   $("pilot-consent").addEventListener("change",()=>setWorking(false));
   bind("pilot-start",createCall);
   bind("pilot-stop",stopCall);
+  bind("pilot-unmute",unlockPlayback);
   bind("pilot-check",async()=>{try{const ok=await refresh();status(ok?"통화 종료 및 대화를 확인했습니다.":"통화 결과를 기다리고 있습니다.",ok?"ok":"");}catch(e){status(errorMessage(e),"error");}});
   bind("pilot-sync",syncCall);
   bind("pilot-draft",draft);

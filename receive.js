@@ -30,16 +30,17 @@
     const area=$('receiver-push-status');
     if(area){area.textContent=message||'';area.hidden=!message;}
   }
-  function pushUnavailableText(){
-    if(/iPad|iPhone|iPod/.test(navigator.userAgent) &&
-       !window.navigator.standalone &&
-       !window.matchMedia('(display-mode: standalone)').matches)
-      return '아이폰은 이 웹사이트를 홈 화면에 추가한 뒤 알림을 허용해야 합니다.';
-    return '이 브라우저에서는 화면을 닫았을 때 전화 알림을 받을 수 없습니다.';
+  // Background OS push is optional. Foreground SIP web calls work without
+  // installing a PWA or granting Notification permission.
+  function canUseBackgroundPush(){
+    if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))
+      return false;
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent))
+      return Boolean(window.navigator.standalone || window.matchMedia?.('(display-mode: standalone)')?.matches);
+    return true;
   }
   function beginNotificationPermission(){
-    if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))
-      return Promise.resolve('unsupported');
+    if(!canUseBackgroundPush())return Promise.resolve('unsupported');
     if(Notification.permission==='default'){
       try{return Notification.requestPermission();}catch(_){return Promise.resolve('denied');}
     }
@@ -53,12 +54,13 @@
   async function registerBackgroundReceiver(permission){
     if(permission!=='granted'){
       reportSipDiagnostic('PUSH_FAILED',permission||'unknown');
-      pushFeedback(permission==='denied'?'설정에서 알림을 허용해야 전화가 옵니다.':pushUnavailableText());
+      pushFeedback(permission==='denied'?'잠금화면 알림이 차단되었습니다. 웹전화는 화면을 열어 받을 수 있습니다.':'잠금화면 알림은 선택 기능입니다. 웹전화는 화면을 열어 받을 수 있습니다.');
       return false;
     }
-    if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    if(!canUseBackgroundPush()){
       reportSipDiagnostic('PUSH_FAILED','unsupported');
-      pushFeedback(pushUnavailableText());return false;
+      pushFeedback('잠금화면 알림은 이 브라우저에서 지원되지 않습니다. 웹전화는 계속 이용할 수 있습니다.');
+      return false;
     }
     await navigator.serviceWorker.register('./service-worker.js?v=3-ontalk-sip',{scope:'/'});
     const reg=await navigator.serviceWorker.ready;
@@ -82,7 +84,7 @@
     return true;
   }
   async function setupExistingPush(){
-    if(!('serviceWorker' in navigator))return;
+    if(!canUseBackgroundPush())return;
     try{
       await navigator.serviceWorker.register('./service-worker.js?v=3-ontalk-sip',{scope:'/'});
       const reg=await navigator.serviceWorker.ready;
@@ -285,10 +287,8 @@
     navigator.vibrate?.([250,120,250]);
   }
   async function enableBell(){
-    const permission=beginNotificationPermission();
     try{
       const ok=await unlockBell();
-      registerBackgroundReceiver(await permission).catch(()=>pushFeedback('전화 알림 연결에 실패했습니다.'));
       if(!ok)throw Error('오디오가 차단돼 있습니다.');
       if(phase==='ringing')beginBell();
       else{
@@ -377,17 +377,10 @@
   function render(result){
     const needsConsent=Boolean(result.consent_required);
     const pushReady=Boolean(result.background_push_ready);
-    // A registered SIP identity is not proof that a sleeping phone will ring.
-    // Surface missing OS push enrollment explicitly instead of silently
-    // pretending the receiver is prepared.
+    // Optional background push must never gate foreground SIP call reception.
     const pushButton=$('receiver-enable-notifications');
-    if(pushButton)pushButton.hidden=needsConsent||pushReady;
-    if(!needsConsent){
-      if(pushReady)pushFeedback('');
-      else if('Notification' in window&&Notification.permission==='denied')
-        pushFeedback('잠금화면 알림 권한이 차단되어 있어 전화가 울리지 않습니다.');
-      else pushFeedback('웹을 내려놓고 전화받으려면 잠금화면 전화 알림을 켜야 합니다.');
-    }
+    if(pushButton)pushButton.hidden=needsConsent||pushReady||!canUseBackgroundPush();
+    if(!needsConsent&&pushReady)pushFeedback('');
     if(incomingSip||phase==='connecting'||phase==='in-call')return;
     const consentRequired=needsConsent;
     show('receiver-consent-panel',consentRequired);
@@ -798,12 +791,10 @@
     }
     const button=$('receiver-consent-confirm');button.disabled=true;
     // Start resume() during this user gesture: Safari does not grant it after fetch.
-    const notificationPermission=beginNotificationPermission();
     const unlock=unlockBell().catch(()=>false);
     try{
       await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
       initializeAsteriskSip().catch(()=>{});
-      await registerBackgroundReceiver(await notificationPermission).catch(()=>{pushFeedback('전화 알림 연결에 실패했습니다.');return false;});
       const allowed=await unlock;
       show('receiver-consent-panel',false);
       show('receiver-alert',!allowed);

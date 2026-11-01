@@ -6,6 +6,10 @@
   if(!host)return;
   const API=String(window.RAJ_CONFIG?.pilotApiBase||'').replace(/\/$/,'');
   const KEY='raj.family.walkthrough.v2';
+  const AUTH_KEY='raj.family.account.v1';
+  const storedAccount=localStorage.getItem(AUTH_KEY)||'';
+  let legacyToken='';
+
   const blank=()=>({
     step:0, family:'',guardianPhone:'',elder:'',phone:'',relationship:'부모님',
     preferredHour:14,preferredMinute:0,interests:'',registered:false,packageCode:'',price:0,
@@ -21,6 +25,8 @@
       if(!old.registered && old.step>2)state.step=1;
     }
   }catch{}
+  legacyToken=state.guestToken;
+  if(storedAccount){state.guestToken=storedAccount;state.step=0;}
   const remember=()=>{try{sessionStorage.setItem(KEY,JSON.stringify(state));}catch{}};
   const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const button=(name,id,kind='primary')=>'<button class="family-button '+kind+'" type="button" id="'+id+'">'+name+'</button>';
@@ -90,8 +96,56 @@
   async function beginRegistration(){
     const action=document.getElementById('family-start');
     if(action)action.disabled=true;
-    try{await checkRegistrationAvailable();move(1);}
-    catch(e){tell(e.message);if(action)action.disabled=false;}
+    try{
+      if(localStorage.getItem(AUTH_KEY)){
+        try{
+          const session=await request('/auth/session');
+          state.accountVerified=true;state.registered=!!session.registered;
+          await checkRegistrationAvailable();
+          move(session.registered?8:1);return;
+        }catch(e){
+          if(e.message!=='FAMILY_LOGIN_REQUIRED')throw e;
+          localStorage.removeItem(AUTH_KEY);
+          state.guestToken=legacyToken;
+        }
+      }
+      const capability=await request('/auth/capabilities');
+      if(!capability.sms_available)throw Error('보호자 문자 인증을 아직 이용할 수 없습니다.');
+      move(9);
+    }catch(e){tell(e.message);if(action)action.disabled=false;}
+  }
+  async function sendLoginCode(){
+    const input=document.getElementById('family-login-phone');
+    const phone=phoneDigits(input.value);
+    if(!/^010[0-9]{8}$/.test(phone)){tell('휴대폰 번호를 확인해 주세요.');return;}
+    const button=document.getElementById('family-request-code');button.disabled=true;
+    try{
+      await request('/auth/request',{method:'POST',body:JSON.stringify({phone})});
+      state.guardianPhone=phone;move(10);
+    }catch(e){tell(e.message);button.disabled=false;}
+  }
+  async function confirmLoginCode(){
+    const input=document.getElementById('family-login-code');
+    const code=input.value.trim();
+    if(!/^[0-9]{6}$/.test(code)){tell('인증번호 6자리를 입력해 주세요.');return;}
+    const button=document.getElementById('family-confirm-code');button.disabled=true;
+    try{
+      const result=await request('/auth/verify',{method:'POST',body:JSON.stringify({
+        phone:state.guardianPhone,code,legacy_token:legacyToken||null
+      })});
+      if(!result.authenticated||!result.token)throw Error('인증 결과를 확인할 수 없습니다.');
+      localStorage.setItem(AUTH_KEY,result.token);
+      state.guestToken=result.token;legacyToken='';state.accountVerified=true;
+      state.registered=!!result.registered;
+      await checkRegistrationAvailable();
+      move(result.registered?8:1);
+    }catch(e){tell(e.message);button.disabled=false;}
+  }
+  async function logOutAccount(){
+    await request('/auth/logout',{method:'POST',body:'{}'}).catch(()=>{});
+    localStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(KEY);
+    state=blank();legacyToken=state.guestToken;move(0);
   }
   async function request(path,options={}){
     if(!API)throw Error('서비스 연결을 확인할 수 없습니다.');
@@ -112,9 +166,19 @@
         PAYMENT_NOT_CONFIRMED:'결제 완료를 확인할 수 없습니다.',
         PAYHUB_REQUEST_FAILED:'결제를 연결할 수 없습니다.',
         PAYHUB_UNAVAILABLE:'결제를 연결할 수 없습니다.',
-        FAMILY_NOT_REGISTERED:'먼저 어르신을 등록해 주세요.'
+        FAMILY_NOT_REGISTERED:'먼저 어르신을 등록해 주세요.',
+        FAMILY_LOGIN_REQUIRED:'FAMILY_LOGIN_REQUIRED',
+        GUARDIAN_SMS_UNAVAILABLE:'문자 인증 연결이 준비되지 않았습니다.',
+        OTP_DELIVERY_UNCERTAIN:'인증번호 발송 결과를 확인할 수 없습니다.',
+        OTP_WAIT_BEFORE_RETRY:'잠시 후 다시 인증번호를 요청해 주세요.',
+        OTP_RATE_LIMITED:'인증 요청 횟수를 초과했습니다.',
+        OTP_INVALID:'인증번호가 올바르지 않습니다.',
+        OTP_EXPIRED_OR_LOCKED:'인증번호가 만료됐습니다. 다시 요청해 주세요.',
+        LEGACY_ACCOUNT_REQUIRES_ORIGINAL_SESSION:'기존 가입 정보가 있습니다. 처음 가입한 기기로 인증하거나 고객센터에 문의해 주세요.',
+        GUARDIAN_PHONE_NOT_VERIFIED:'인증된 휴대폰 번호와 다릅니다.'
       };
       if(errors[data.detail])throw Error(errors[data.detail]);
+      if(response.status===401)throw Error('FAMILY_LOGIN_REQUIRED');
       if(response.status===404 && path==='/onboarding')
         throw Error('현재 어르신 등록 서비스를 이용할 수 없습니다.');
       if(response.status===404)throw Error('요청한 정보를 찾을 수 없습니다.');
@@ -137,6 +201,7 @@
   function submitGuardian(){
     const name=document.getElementById('family-name').value.trim();
     const phone=phoneDigits(document.getElementById('guardian-phone').value);
+    if(phone!==state.guardianPhone){tell('인증한 휴대폰 번호를 사용해 주세요.');return;}
     if(!name||phone.length<10||phone.length>11){tell('이름과 전화번호를 확인해 주세요.');return;}
     state.family=name;state.guardianPhone=phone;move(2);
   }
@@ -245,20 +310,43 @@
     };
   }
   async function dashboard(){
-    page('가족 기록',
-      '<div id="family-overview" class="family-confirm">기록을 확인하고 있습니다.</div>'+
+    page('내 정보',
+      '<div id="family-overview" class="family-confirm">불러오는 중</div>'+
+      '<div id="family-tickets"></div>'+
+      '<div id="family-purchases"></div>'+
+      '<div id="family-usage"></div>'+
+      '<div id="family-optional-pay"></div>'+
       '<div id="family-shared-list"></div>'+
-      '<div id="family-share-action"></div>'+ 
-
-      button('새로고침','family-dashboard-refresh','outline')+
-      '<div id="family-optional-pay"></div>'+error,false);
-    document.getElementById('family-dashboard-refresh').onclick=()=>dashboard();
+      '<div id="family-share-action"></div>'+
+      '<button type="button" id="family-signout" class="family-back">로그아웃</button>'+error,false);
+    document.getElementById('family-signout').onclick=logOutAccount;
     try{
-      const [profile,summary]=await Promise.all([request('/onboarding'),request('/summary')]);
+      const [profile,summary,account]=await Promise.all([
+        request('/onboarding'),request('/summary'),request('/account')
+      ]);
       if(state.step!==8)return;
-      if(profile.consent!=='CONFIRMED'){move(3);return;}
+      if(!account.registered)throw Error('등록된 가족 정보를 찾지 못했습니다.');
+      state.elder=profile.elder_name;state.registered=true;
       document.getElementById('family-overview').innerHTML=
-        '<strong>'+esc(profile.elder_name)+'</strong><strong>잔여 통화 '+Number(profile.balance||0)+'회</strong>';
+        '<strong>'+esc(profile.elder_name)+'</strong><strong>잔여 통화 '+Number(account.balance||0)+'회</strong>';
+      const purchases=account.purchases||[];
+      const usages=account.usage||[];
+      const bought=purchases.reduce((total,p)=>total+Number(p.sessions||0),0);
+      const used=usages.reduce((total,u)=>total+Number(u.sessions||0),0);
+      document.getElementById('family-tickets').innerHTML=
+        '<p class="family-primary-message">구매 '+bought+'회 · 사용 '+used+'회</p>'+
+        (profile.consent!=='CONFIRMED'
+          ?'<p class="family-primary-message">어르신 통화 동의 확인 대기 중</p>':'');
+      document.getElementById('family-purchases').innerHTML=purchases.length
+        ?'<h2 class="family-summary-title">결제 내역</h2>'+
+         purchases.map(p=>'<div class="family-shared-summary"><strong>'+Number(p.amount_krw).toLocaleString('ko-KR')+
+            '원 · '+Number(p.sessions)+'회</strong><p>'+esc((p.paid_at||'').slice(0,10))+'</p></div>').join('')
+        :'';
+      document.getElementById('family-usage').innerHTML=usages.length
+        ?'<h2 class="family-summary-title">사용 내역</h2>'+
+         usages.map(u=>'<div class="family-shared-summary"><strong>'+Number(u.sessions)+'회 사용</strong><p>'+
+           esc((u.at||'').slice(0,10))+'</p></div>').join('')
+        :'';
       const list=document.getElementById('family-shared-list');
       if(profile.share_requested&&!profile.share_approved){
         list.innerHTML='<p class="family-primary-message">가족 공유 동의 확인 대기 중입니다.</p>';
@@ -287,14 +375,17 @@
           catch(e){tell(e.message);}
         };
       }
-      if(Number(profile.balance||0)===0){
-        const payment=await request('/payment-ready').catch(()=>null);
-        if(payment?.ready&&payment.packages?.length&&state.step===8){
-          document.getElementById('family-optional-pay').innerHTML=button('이용권 선택','family-open-plans','outline');
-          document.getElementById('family-open-plans').onclick=()=>move(4);
-        }
+      const payment=await request('/payment-ready').catch(()=>null);
+      if(payment?.ready&&payment.packages?.length&&state.step===8){
+        document.getElementById('family-optional-pay').innerHTML=button('이용권 충전','family-open-plans','outline');
+        document.getElementById('family-open-plans').onclick=()=>move(4);
       }
-    }catch(e){if(state.step===8)tell(e.message);}
+    }catch(e){
+      if(state.step===8){
+        if(e.message==='FAMILY_LOGIN_REQUIRED'){localStorage.removeItem(AUTH_KEY);move(9);}
+        else tell(e.message);
+      }
+    }
   }
   async function pay(){
     const b=document.getElementById('family-pay');b.disabled=true;
@@ -338,12 +429,26 @@
     if(state.step===0){
       page('',"<section class=\"family-opening\" aria-label=\"기쁜사이 시작\">\n          <div class=\"family-opening-center\">\n            <a class=\"family-opening-brand\" id=\"family-home-opening\" href=\"./\" aria-label=\"기쁜사이 홈으로 이동\">\n              <svg class=\"family-opening-leaf\" width=\"120\" height=\"118\" viewBox=\"0 0 125 123\" aria-hidden=\"true\">\n                <path d=\"M49 81 C40 35 75 4 111 4 C126 33 110 74 74 101 C58 107 53 96 49 81Z\" fill=\"#69b52d\"/>\n                <path d=\"M8 49 C29 28 61 39 81 67 C93 83 95 102 81 115 C49 123 7 98 8 49Z\" fill=\"#005b3a\"/>\n              </svg>\n              <span class=\"family-opening-brand-name\">기쁜사이\n                <svg class=\"family-opening-smile\" width=\"160\" height=\"24\" viewBox=\"0 0 200 26\" aria-hidden=\"true\"><path d=\"M7 4 Q100 46 193 4\" stroke=\"#60b52b\" stroke-width=\"7\" stroke-linecap=\"round\" fill=\"none\"/></svg>\n              </span>\n            </a>\n            <h1 class=\"family-opening-heading\"><span>오늘의 대화가,</span><span class=\"family-opening-second\">내일의 일기가 됩니다</span></h1>\n            <button class=\"family-button primary\" id=\"family-start\" type=\"button\">시작하기 <span class=\"family-start-arrow\" aria-hidden=\"true\">→</span></button>\n          </div>\n          <svg class=\"family-opening-waves\" viewBox=\"0 0 1600 160\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n            <path d=\"M0 35 C280 -5 435 178 740 151 S1232 76 1600 32 L1600 160 L0 160Z\" fill=\"#e8f3d2\"/>\n            <path d=\"M0 140 C365 5 499 170 791 153 S1321 44 1600 132 L1600 160 L0 160Z\" fill=\"#b4d8a7\" fill-opacity=\".56\"/>\n          </svg>\n        </section>"+error,false);
       document.getElementById('family-start').onclick=beginRegistration;
+    }else if(state.step===9){
+      page('휴대폰 인증','<form id="family-login-form" class="family-form">'+
+        '<label for="family-login-phone">보호자 휴대폰 번호</label>'+
+        '<input id="family-login-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" value="'+esc(state.guardianPhone)+'" required>'+
+        button('인증번호 받기','family-request-code')+error+'</form>',false);
+      document.getElementById('family-login-form').onsubmit=e=>{e.preventDefault();sendLoginCode();};
+      document.getElementById('family-request-code').onclick=sendLoginCode;
+    }else if(state.step===10){
+      page('인증번호 확인','<form id="family-code-form" class="family-form">'+
+        '<label for="family-login-code">문자로 받은 인증번호 6자리</label>'+
+        '<input id="family-login-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>'+
+        button('확인','family-confirm-code')+error+'</form>',false);
+      document.getElementById('family-code-form').onsubmit=e=>{e.preventDefault();confirmLoginCode();};
+      document.getElementById('family-confirm-code').onclick=confirmLoginCode;
     }else if(state.step===1){
       page('가족 연락처','<form id="family-guardian-form" class="family-form">'+
         '<label for="family-name">이름</label>'+
         '<input id="family-name" maxlength="60" autocomplete="name" value="'+esc(state.family)+'" required>'+
         '<label for="guardian-phone">전화번호</label>'+
-        '<input id="guardian-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" value="'+esc(state.guardianPhone)+'" required>'+
+        '<input id="guardian-phone" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(state.guardianPhone)+'" readonly required>'+
         button('다음','family-next')+error+'</form>');
       document.getElementById('family-guardian-form').onsubmit=e=>{e.preventDefault();submitGuardian();};
       document.getElementById('family-next').onclick=submitGuardian;

@@ -194,6 +194,7 @@
   async function showSubject(){
     window.RAJ_SELECTED_SUBJECT=selected;
     window.RAJ_CREDITS_AVAILABLE=false;
+    window.RAJ_CONSENT_APPROVED=false;
     window.RAJ_REFRESH_CALL_BUTTON?.();
     text('ops-credit','잔여 회기 —');
     text('ops-stage','첫 통화 안내');
@@ -407,5 +408,10 @@
     safe(async()=>{await showSubject();switchTab(activeTab);});
   });
   window.addEventListener('raj:pilot-connected',connected);
+  window.addEventListener('raj:diary-saved',()=>safe(async()=>{
+    await showSubject();
+    switchTab('record');
+    $('pilot-saved').scrollIntoView({behavior:'smooth',block:'start'});
+  }));
   window.addEventListener('raj:operations-changed',()=>safe(reload));
 })();

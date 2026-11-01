@@ -140,6 +140,7 @@
     if(activityTimer){clearInterval(activityTimer);activityTimer=0;}
     agentSpeaking=false;micMuted=false;lastVoiceState='';
     show('receiver-voice',false);
+    show('receiver-footer',true);
     show('receiver-connected',false);
     show('receiver-sound',false);
     show('receiver-signal',true);
@@ -152,9 +153,10 @@
     show('receiver-incoming',false);
     show('receiver-signal',false);
     show('receiver-voice',true);
+    show('receiver-footer',false);
     show('receiver-connected',true);
     show('receiver-sound',speakerNeedsTap);
-    title('AI와 통화 중','편하게 말씀해 주세요.');
+    title('통화 중','');
     if(!callStartedAt)callStartedAt=Date.now();
     const updateDuration=()=>{
       const elapsed=Math.max(0,Math.floor((Date.now()-callStartedAt)/1000));

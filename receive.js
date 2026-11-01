@@ -6,6 +6,34 @@
  const token=location.hash.slice(1)||sessionStorage.getItem('raj.receiver.token')||'';
  let client=null,active=false,polling=false,answered=false,ringId='',sdkPromise=null;
  let lastState='';
+ let bellContext=null,bellTimer=0,bellAllowed=false;
+ function ringTone(){
+   if(!bellAllowed||!bellContext||document.hidden)return;
+   try{
+     const osc=bellContext.createOscillator(),gain=bellContext.createGain();
+     osc.type='sine';osc.frequency.value=640;
+     gain.gain.setValueAtTime(0.0001,bellContext.currentTime);
+     gain.gain.exponentialRampToValueAtTime(0.1,bellContext.currentTime+0.025);
+     gain.gain.exponentialRampToValueAtTime(0.0001,bellContext.currentTime+0.3);
+     osc.connect(gain).connect(bellContext.destination);
+     osc.start();osc.stop(bellContext.currentTime+0.32);
+   }catch{}
+ }
+ function beginBell(){
+   if(!bellAllowed||bellTimer)return;
+   ringTone();bellTimer=setInterval(ringTone,1300);
+   navigator.vibrate?.([180,120,180]);
+ }
+ function stopBell(){if(bellTimer){clearInterval(bellTimer);bellTimer=0;}}
+ async function enableBell(){
+   try{
+     bellContext=bellContext||new (window.AudioContext||window.webkitAudioContext)();
+     await bellContext.resume();bellAllowed=true;
+     $('receiver-alert').hidden=true;
+     title('전화 기다리는 중','벨소리가 켜졌습니다. 화면을 열어두세요.');
+     if(!document.getElementById('receiver-incoming').hidden)beginBell();
+   }catch(e){error('벨소리를 켤 수 없습니다. 화면 알림은 계속 표시됩니다.');}
+ }
  const title=(t,n)=>{$('receiver-title').textContent=t;$('receiver-note').textContent=n||'';};
  const show=(id,yes)=>{$(id).hidden=!yes;};
  const error=t=>{show('receiver-error',!!t);$('receiver-error').textContent=t||'';};
@@ -23,6 +51,7 @@
    if(active)return;
    const ring=r.ring;
    document.body.classList.remove('ringing');
+   stopBell();
    show('receiver-incoming',false);
    show('receiver-connected',false);
    show('receiver-refresh',false);
@@ -33,6 +62,7 @@
    if(ring.status==='RINGING'){
      if(lastState!==ring.id){lastState=ring.id;ringId=ring.id;}
      document.body.classList.add('ringing');
+     beginBell();
      title('전화가 왔어요','아래 버튼을 누르면 AI 상담을 시작합니다.');
      show('receiver-incoming',true);
      return;
@@ -82,6 +112,7 @@
  }
  async function answer(){
    if(active||!ringId)return;
+   stopBell();
    const btn=$('receiver-answer');btn.disabled=true;
    error('');
    title('통화 연결 중','마이크 사용을 허용해 주세요.');
@@ -113,6 +144,7 @@
    }finally{btn.disabled=false;}
  }
  async function decline(){
+   stopBell();
    if(!ringId)return;
    try{await api('decline',{method:'POST',body:JSON.stringify({id:ringId})});ringId='';await check();}
    catch(e){error(pendingMessage(e));}
@@ -125,6 +157,7 @@
    await finalize();
    $('receiver-hangup').disabled=false;
  }
+ $('receiver-alert').addEventListener('click',enableBell);
  $('receiver-answer').addEventListener('click',answer);
  $('receiver-decline').addEventListener('click',decline);
  $('receiver-sound').addEventListener('click',unlock);
@@ -141,5 +174,5 @@
  sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
  check();
  setInterval(()=>{if(!document.hidden)check();},3500);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBell();else check();});
 })();

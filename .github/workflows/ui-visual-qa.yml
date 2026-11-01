@@ -1,0 +1,46 @@
+name: Verify Kippeunsai visual flows (no production calls)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "qa/ui-smoke.mjs"
+      - ".github/workflows/ui-visual-qa.yml"
+      - "index.html"
+      - "styles.cycle07.css"
+      - "family-demo.cycle07.js"
+      - "receive.html"
+      - "receive.css"
+      - "operations.cycle07.js"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install isolated UI-only browser
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Start static preview
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/raj-ui-server.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8765/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Capture and assert PC and mobile flows
+        run: node qa/ui-smoke.mjs
+      - name: Save screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kippeunsai-ui-visual-qa
+          path: qa-screenshots/
+          if-no-files-found: ignore

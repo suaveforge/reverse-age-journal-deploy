@@ -84,7 +84,10 @@
     return true;
   }
   async function setupExistingPush(){
-    if(!canUseBackgroundPush())return;
+    // ONTALK parity: keep the service worker available for an already-permitted
+    // local incoming-SIP notification even when OS background push is unavailable.
+    // Do not require Home Screen installation for a foreground SIP web call.
+    if(!('serviceWorker' in navigator))return;
     try{
       await navigator.serviceWorker.register('./service-worker.js?v=3-ontalk-sip',{scope:'/'});
       const reg=await navigator.serviceWorker.ready;
@@ -842,10 +845,20 @@
   sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
   check();
   setInterval(check,3500);
+  function resumeReceiverAfterBackground(){
+    if(active||incomingSip||sipStarting||phase==='connecting'||phase==='in-call')return;
+    // iOS may suspend a minimized page. Re-check JsSIP when Safari resumes;
+    // never tear down a live or incoming call for a background transition.
+    if(!sipUA||!sipRegistered||sipUA.isConnected?.()===false||sipUA.isRegistered?.()===false)
+      initializeAsteriskSip(true).catch(()=>{});
+    check();
+  }
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){
       if(phase==='ringing')beginBell();
-      check();
+      resumeReceiverAfterBackground();
     }
   });
+  window.addEventListener('pageshow',resumeReceiverAfterBackground);
+  window.addEventListener('online',resumeReceiverAfterBackground);
 })();

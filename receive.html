@@ -7,7 +7,7 @@
   <title>어르신 웹전화 | 기쁜사이</title>
   <link rel="stylesheet" href="./receive.css">
   <script defer src="./config.js"></script>
-  <script defer src="./receive.js?v=10"></script>
+  <script defer src="./receive.js?v=11"></script>
 </head>
 <body>
   <main class="receiver">
@@ -26,8 +26,24 @@
         <button id="receiver-answer" class="action primary" type="button">전화 받기</button>
         <button id="receiver-decline" class="action secondary" type="button">거절</button>
       </div>
+      <div id="receiver-voice" class="voice-panel" hidden>
+        <p id="receiver-duration" class="call-duration" aria-label="통화 시간">00:00</p>
+        <div class="voice-participants" aria-label="실시간 통화 상태">
+          <div id="voice-ai" class="voice-party">
+            <strong>AI</strong>
+            <span id="voice-ai-status" class="voice-status">듣는 중</span>
+            <div id="voice-ai-bars" class="voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div id="voice-self" class="voice-party">
+            <strong>나</strong>
+            <span id="voice-self-status" class="voice-status">마이크 연결 중</span>
+            <div id="voice-self-bars" class="voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
       <div id="receiver-connected" hidden>
-        <button id="receiver-sound" class="action secondary" type="button">소리 켜기</button>
+        <button id="receiver-sound" class="action secondary" type="button" hidden>소리 켜기</button>
+        <button id="receiver-mute" class="action secondary" type="button" aria-pressed="false">마이크 끄기</button>
         <button id="receiver-hangup" class="action danger" type="button">통화 종료</button>
       </div>
       <p id="receiver-error" class="error" role="alert" hidden></p>

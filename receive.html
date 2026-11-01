@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./receive.css?v=20261101-unified05">
   <script defer src="./config.js"></script>
   <script defer src="https://jssip.net/download/releases/jssip-3.10.0.min.js"></script>
-  <script defer src="./receive.js?v=17"></script>
+  <script defer src="./receive.js?v=18-ontalk-incoming"></script>
 </head>
 <body>
   <main class="receiver">
@@ -21,6 +21,8 @@
       <h1 id="receiver-title">연결 준비</h1>
       <p id="receiver-note">잠시만 기다려 주세요.</p>
       <p id="receiver-push-status" class="push-status" role="status" hidden></p>
+      <p id="receiver-sip-status" class="push-status" role="status" hidden></p>
+      <button id="receiver-reconnect" class="action secondary" type="button" hidden>통화 연결 다시 하기</button>
       <div id="receiver-consent-panel" hidden>
         <p>가족이 안부 상담을 신청했습니다. AI가 예약 시간과 이후 3일마다 같은 시간에 이 화면으로 상담 전화를 걸며, 음성을 처리하고 녹음과 대화 기록을 만들 수 있습니다. 원치 않으면 동의하지 않아도 됩니다.</p>
         <label style="display:block;margin:20px 0;font-size:1rem"><input id="receiver-consent-check" type="checkbox" style="width:24px;height:24px;vertical-align:middle"> 3일 간격 웹전화 상담·음성 처리·녹음에 동의합니다</label>

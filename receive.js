@@ -175,7 +175,7 @@
       stopBell();phase='idle';stopCallUI();
       show('receiver-alert',false);
       show('receiver-incoming',false);
-      title('안부 상담 안내','동의하시면 예약한 시간에 이 화면으로 상담 전화를 받을 수 있습니다.');
+      title('안부 상담 안내','동의하시면 예약 시간과 이후 3일마다 같은 시간에 웹전화를 받습니다.');
       return;
     }
     const ring=result.ring;

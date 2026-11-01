@@ -9,7 +9,7 @@
   const blank=()=>({
     step:0, family:'',guardianPhone:'',elder:'',phone:'',relationship:'부모님',
     preferredHour:14,interests:'',registered:false,packageCode:'',price:0,
-    credits:0,orderId:'',when:'',booked:false,
+    credits:0,orderId:'',when:'',booked:false,phoneReady:false,
     guestToken:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','')
   });
   let state=blank();
@@ -140,7 +140,7 @@
     try{
       const data=await request('/onboarding');
       if(data.consent==='CONFIRMED')move(4);
-      else tell('어르신 동의 확인 중입니다.');
+      else tell('상담사의 동의 확인이 아직 완료되지 않았습니다.');
     }catch(e){tell(e.message);}
     finally{if(action)action.disabled=false;}
   }
@@ -200,7 +200,7 @@
         guest_token:state.guestToken,order_id:state.orderId,scheduled_at:at.toISOString()
       })});
       if(!result.saved)throw Error('예약을 저장하지 못했습니다.');
-      state.when=at.toISOString();state.booked=true;move(7);
+      state.when=result.scheduled_at||at.toISOString();state.phoneReady=Boolean(result.automatic_phone_delivery_enabled);state.booked=true;move(7);
     }catch(e){tell(e.message);action.disabled=false;}
   }
   function render(){
@@ -239,8 +239,10 @@
       document.getElementById('family-elder-form').onsubmit=e=>{e.preventDefault();submitElder();};
       document.getElementById('family-register').onclick=submitElder;
     }else if(state.step===3){
-      page('어르신 동의 확인','<p class="family-primary-message">상담사가 어르신과 통화한 뒤 확인합니다.</p>'+
-        button('동의 확인하기','family-consent-check')+error,false);
+      page('어르신 동의 요청 접수',
+        '<p class="family-primary-message">상담사가 어르신의 통화 동의를 직접 확인해야 결제를 진행할 수 있습니다.</p>'+
+        '<p class="family-primary-message">확인된 뒤 아래 버튼으로 다음 단계로 이동합니다.</p>'+
+        button('동의 결과 확인','family-consent-check')+error,false);
       document.getElementById('family-consent-check').onclick=checkConsent;
     }else if(state.step===4){
       plans();
@@ -264,7 +266,9 @@
     }else{
       page('예약 접수','<div class="family-confirm"><strong>'+esc(state.elder)+'</strong>'+
         '<strong>'+esc(dateDisplay(state.when))+'</strong></div>'+
-        '<p class="family-primary-message">테스트 예약입니다. 자동 전화 발신은 진행되지 않습니다.</p>'+
+        '<p class="family-primary-message">'+(state.phoneReady
+          ?'예약된 시간에 AI 전화가 발신되도록 일정표에 등록됐습니다.'
+          :'통화 일정은 저장됐지만, 전화 발신 서비스 설정이 아직 완료되지 않아 실제 전화가 걸리지 않습니다.')+'</p>'+
         button('내 이용 현황','family-dashboard'),false);
       document.getElementById('family-dashboard').onclick=async()=>{
         try{
@@ -276,7 +280,7 @@
                '<p>'+esc(report.excerpt)+'</p></article>').join(''):'';
           page('이용 현황','<div class="family-confirm"><strong>'+esc(r.elder_name)+'</strong>'+
             '<strong>'+esc(dateDisplay(r.booking_at||state.when))+'</strong>'+
-            '<strong>테스트 이용권 '+state.credits+'회</strong></div>'+
+            '<strong>남은 이용권 '+Number(r.balance??state.credits)+'회</strong></div>'+
             (shared?'<h2 class="family-summary-title">가족에게 공유된 기록</h2>'+shared:''),false);
         }catch(e){tell(e.message);}
       };

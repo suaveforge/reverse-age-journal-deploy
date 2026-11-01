@@ -9,6 +9,11 @@
   let lastRingId='', phase='idle', agentSpeaking=false, micMuted=false;
   let durationTimer=0, activityTimer=0, callStartedAt=0, lastVoiceState='', speakerNeedsTap=false;
   let bellContext=null, bellOutput=null, bellTimer=0, bellAllowed=false;
+  let homeReturnTimer=0;
+  function returnHomeAfterCall(){
+    if(homeReturnTimer)return;
+    homeReturnTimer=setTimeout(()=>{window.location.replace('./');},1800);
+  }
   const bellNotes=new Set();
   const title=(heading,note)=>{
     $('receiver-title').textContent=heading;
@@ -251,10 +256,14 @@
     }catch(e){error('소리를 켤 수 없습니다. 기기 음량을 확인해 주세요.');}
   }
   function endClientCall(){
+    if(phase==='ending'&&!client)return;
     stopBell();stopCallUI();active=false;phase='ending';
-    client=null;
-    title('기록 정리 중','대화 기록을 저장하고 있습니다.');
-    finalize();
+    client=null;answered=false;
+    title('통화가 종료됐어요','메인화면으로 돌아갑니다.');
+    // The server continues persisting the diary independently of this page.
+    // Do not keep an elder trapped on the call screen while it settles.
+    finalize(false);
+    returnHomeAfterCall();
   }
   async function answer(){
     if(active||phase==='connecting'||!ringId)return;

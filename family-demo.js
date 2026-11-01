@@ -162,6 +162,57 @@
       }
     }catch(e){if(state.step===4)tell(e.message);}
   }
+  async function dashboard(){
+    page('가족 기록',
+      '<div id="family-overview" class="family-confirm">기록을 확인하고 있습니다.</div>'+
+      '<div id="family-shared-list"></div>'+
+      '<div id="family-share-action"></div>'+
+      button('새로고침','family-dashboard-refresh','outline')+
+      '<div id="family-optional-pay"></div>'+error,false);
+    document.getElementById('family-dashboard-refresh').onclick=()=>dashboard();
+    try{
+      const [profile,summary]=await Promise.all([request('/onboarding'),request('/summary')]);
+      if(state.step!==8)return;
+      if(profile.consent!=='CONFIRMED'){move(3);return;}
+      document.getElementById('family-overview').innerHTML=
+        '<strong>'+esc(profile.elder_name)+'</strong><strong>잔여 통화 '+Number(profile.balance||0)+'회</strong>';
+      const list=document.getElementById('family-shared-list');
+      if(profile.share_requested&&!profile.share_approved){
+        list.innerHTML='<p class="family-primary-message">가족 공유 동의 확인 대기 중입니다.</p>';
+      }else if(summary.shared&&Array.isArray(summary.reports)&&summary.reports.length){
+        list.innerHTML='<h2 class="family-summary-title">가족에게 공유된 일기</h2>'+
+          summary.reports.map(item=>'<article class="family-shared-summary"><strong>'+esc(item.title)+'</strong>'+
+          '<p>'+esc(item.excerpt)+'</p></article>').join('');
+      }else if(profile.share_approved){
+        list.innerHTML='<p class="family-primary-message">상담 후 일기가 저장되면 이곳에서 볼 수 있습니다.</p>';
+      }else{
+        list.innerHTML='<p class="family-primary-message">일기를 가족에게 공유하려면 별도 동의가 필요합니다.</p>';
+      }
+      const action=document.getElementById('family-share-action');
+      if(!profile.share_requested){
+        action.innerHTML=button('가족 일기 공유 요청','family-share-request');
+        document.getElementById('family-share-request').onclick=async()=>{
+          const b=document.getElementById('family-share-request');b.disabled=true;
+          try{await request('/sharing',{method:'POST',body:JSON.stringify({requested:true})});await dashboard();}
+          catch(e){tell(e.message);b.disabled=false;}
+        };
+      }else{
+        action.innerHTML=button('가족 공유 중단','family-share-revoke','outline');
+        document.getElementById('family-share-revoke').onclick=async()=>{
+          if(!confirm('가족에게 더 이상 상담 기록을 공유하지 않을까요?'))return;
+          try{await request('/sharing',{method:'POST',body:JSON.stringify({requested:false})});await dashboard();}
+          catch(e){tell(e.message);}
+        };
+      }
+      if(Number(profile.balance||0)===0){
+        const payment=await request('/payment-ready').catch(()=>null);
+        if(payment?.ready&&payment.packages?.length&&state.step===8){
+          document.getElementById('family-optional-pay').innerHTML=button('이용권 선택','family-open-plans','outline');
+          document.getElementById('family-open-plans').onclick=()=>move(4);
+        }
+      }
+    }catch(e){if(state.step===8)tell(e.message);}
+  }
   async function pay(){
     const b=document.getElementById('family-pay');b.disabled=true;
     try{
@@ -260,31 +311,22 @@
         button('예약하기','family-reserve')+error+'</form>',false);
       document.getElementById('family-book-form').onsubmit=e=>{e.preventDefault();book();};
       document.getElementById('family-reserve').onclick=book;
-    }else{
+    }else if(state.step===7){
       page('예약 접수','<div class="family-confirm"><strong>'+esc(state.elder)+'</strong>'+
         '<strong>'+esc(dateDisplay(state.when))+'</strong></div>'+
         '<p class="family-primary-message">'+(state.phoneReady
           ?'예약된 시간에 AI 전화가 발신되도록 일정표에 등록됐습니다.'
           :'통화 일정은 저장됐지만, 전화 발신 서비스 설정이 아직 완료되지 않아 실제 전화가 걸리지 않습니다.')+'</p>'+
         button('내 이용 현황','family-dashboard'),false);
-      document.getElementById('family-dashboard').onclick=async()=>{
-        try{
-          const [r,summary]=await Promise.all([request('/onboarding'),request('/summary')]);
-          if(!r.registered)throw Error('등록 정보를 확인할 수 없습니다.');
-          const shared=(summary.shared && Array.isArray(summary.reports))
-            ?summary.reports.slice(0,6).map(report=>
-               '<article class="family-shared-summary"><strong>'+esc(report.title)+'</strong>'+
-               '<p>'+esc(report.excerpt)+'</p></article>').join(''):'';
-          page('이용 현황','<div class="family-confirm"><strong>'+esc(r.elder_name)+'</strong>'+
-            '<strong>'+esc(dateDisplay(r.booking_at||state.when))+'</strong>'+
-            '<strong>남은 이용권 '+Number(r.balance??state.credits)+'회</strong></div>'+
-            (shared?'<h2 class="family-summary-title">가족에게 공유된 기록</h2>'+shared:''),false);
-        }catch(e){tell(e.message);}
-      };
+      document.getElementById('family-dashboard').onclick=()=>move(8);
+    }else if(state.step===8){
+      dashboard();
     }
   }
   // Never trust the browser's stored consent state. Verify against the counselor record.
-  if(state.registered && state.step>=4 && state.step<7){
+  // A previous build stranded approved families on optional payment.
+  if(state.registered&&state.step===4&&!state.packageCode)state.step=8;
+  if(state.registered&&[4,5,6].includes(state.step)){
     request('/onboarding').then(r=>{
       if(r.consent!=='CONFIRMED'){state.step=3;remember();render();}
     }).catch(()=>{});

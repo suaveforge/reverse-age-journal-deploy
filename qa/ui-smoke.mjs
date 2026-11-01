@@ -24,6 +24,17 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   const uncaught=[];
   page.on('pageerror',err=>uncaught.push(err.message));
+  // All phone-auth routes are synthetic; no SMS is ever dispatched in visual QA.
+  await page.route('**/api/pilot/family/auth/**',route=>{
+    const u=route.request().url(), method=route.request().method();
+    const payload=u.endsWith('/capabilities')?{sms_available:true}:
+      u.endsWith('/request')?{requested:true,expires_in_seconds:300}:
+      u.endsWith('/verify')?{authenticated:true,token:'synthetic-verified-guardian-session-token-12345678',registered:false}:
+      u.endsWith('/session')?{authenticated:true,registered:false,phone_last4:'5678'}:{};
+    route.fulfill({status:200,contentType:'application/json',
+      headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS'},
+      body:JSON.stringify(payload)});
+  });
   await page.route('**/api/pilot/family/onboarding',route=>route.fulfill({
     status:404,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},
     body:JSON.stringify({detail:'FAMILY_NOT_REGISTERED'})
@@ -39,10 +50,19 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
     throw Error('Approved text lost');
   await audit(page,'01-home-'+label,width,height);
   await page.locator('#family-start').click();
+  await page.locator('#family-login-form').waitFor({state:'visible',timeout:10000});
+  await audit(page,'02-phone-login-'+label,width,height);
+  await page.locator('#family-login-phone').fill('01012345678');
+  await page.locator('#family-request-code').click();
+  await page.locator('#family-code-form').waitFor({state:'visible',timeout:10000});
+  await audit(page,'02-otp-code-'+label,width,height);
+  await page.locator('#family-login-code').fill('123456');
+  await page.locator('#family-confirm-code').click();
   await page.locator('#family-guardian-form').waitFor({state:'visible',timeout:10000});
   await audit(page,'02-family-contact-'+label,width,height);
   await page.locator('#family-name').fill('QA가족');
-  await page.locator('#guardian-phone').fill('01012345678');
+  const lockedPhone=await page.locator('#guardian-phone').getAttribute('readonly');
+  if(lockedPhone===null)throw Error('Verified phone number is editable');
   await page.locator('#family-next').click();
   await page.locator('#family-elder-form').waitFor({state:'visible',timeout:10000});
   await audit(page,'03-elder-registration-'+label,width,height);

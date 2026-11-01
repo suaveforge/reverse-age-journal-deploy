@@ -54,12 +54,31 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
     document.querySelector('#pilot-management').hidden=false;
     document.querySelector('.pilot-section-head').hidden=true;
     document.querySelector('.ops-tabs').hidden=false;
-    document.querySelector('#ops-create-panel').hidden=false;
-    document.querySelector('#ops-subject-panel').hidden=false;
     document.querySelector('.page').classList.add('counselor-mode');
     document.querySelector('.page').classList.remove('family-mode');
+    document.querySelectorAll('[data-ops-panel]').forEach(p=>{p.hidden=p.dataset.opsPanel!=='info';});
+    document.querySelector('#ops-create-panel').hidden=false;
+    document.querySelector('#ops-subject-panel').hidden=false;
+    document.querySelector('#ops-profile-details').hidden=true;
+    document.querySelector('#ops-outbox-panel').hidden=true;
+    document.querySelector('#pilot-call-panel').hidden=true;
+    document.querySelector('#pilot-results').hidden=true;
+    document.querySelector('#pilot-draft-panel').hidden=true;
+    document.querySelector('#pilot-saved').hidden=true;
   });
-  await audit(page,'05-counselor-layout-preview-'+label,width,height);
+  await audit(page,'05-counselor-info-preview-'+label,width,height);
+  for(const tab of ['call','tickets','record']){
+    await page.evaluate(tab=>{
+      document.querySelectorAll('[data-ops-panel]').forEach(p=>{p.hidden=p.dataset.opsPanel!==tab;});
+      document.querySelector('#ops-outbox-panel').hidden=true;
+      document.querySelector('#pilot-call-panel').hidden=tab!=='call';
+      document.querySelector('#pilot-results').hidden=true;
+      document.querySelector('#pilot-draft-panel').hidden=true;
+      document.querySelector('#pilot-saved').hidden=true;
+      document.querySelectorAll('[data-ops-tab]').forEach(b=>b.classList.toggle('active',b.dataset.opsTab===tab));
+    },tab);
+    await audit(page,'05-counselor-'+tab+'-preview-'+label,width,height);
+  }
   await page.close();
   const receiver=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   receiver.on('pageerror',err=>uncaught.push(err.message));

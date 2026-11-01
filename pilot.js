@@ -53,7 +53,7 @@
   }
   function show(node,yes){node.hidden=!yes;}
   function setWorking(working){
-    $("pilot-start").disabled=working||!operatorCode||!$("pilot-consent").checked||!window.RAJ_SELECTED_SUBJECT||!window.RAJ_CREDITS_AVAILABLE||active;
+    $("pilot-start").disabled=working||!operatorCode||!$("pilot-consent").checked||!window.RAJ_SELECTED_SUBJECT||!window.RAJ_CONSENT_APPROVED||!window.RAJ_CREDITS_AVAILABLE||active;
     $("pilot-stop").disabled=!active;
     $("pilot-unmute").hidden=!active;
     $("pilot-unmute").disabled=!active||!client;
@@ -100,6 +100,7 @@
   async function createCall(){
     if(!operatorCode||active||!$("pilot-consent").checked)return;
     if(!window.RAJ_SELECTED_SUBJECT){status("통화할 어르신을 먼저 선택해 주세요.","error");return;}
+    if(!window.RAJ_CONSENT_APPROVED){status("어르신 통화 동의 확인 후 시작할 수 있습니다.","error");return;}
     if(!window.RAJ_CREDITS_AVAILABLE){status("체험 회기 또는 이용권을 먼저 충전해 주세요.","error");return;}
     if(!window.confirm("동의받은 시험 통화를 시작할까요? 실제 Retell 통화 요금이 발생할 수 있습니다."))return;
     clearDraft();
@@ -262,9 +263,10 @@
     try{
       await api("/calls/"+encodeURIComponent(currentCallId)+"/diary",
         {method:"PUT",body:JSON.stringify({title,body,consent_to_save:true})});
-      status("일기가 저장됐습니다. 다음 통화 일정을 확인하세요.","ok");
-      window.dispatchEvent(new Event("raj:operations-changed"));
+      status("일기가 저장됐습니다. 가족 화면에서 공유된 기록을 확인할 수 있습니다.","ok");
       await loadDiaries();
+      window.dispatchEvent(new Event("raj:operations-changed"));
+      window.dispatchEvent(new Event("raj:diary-saved"));
     }catch(e){status(errorMessage(e),"error");}
     finally{$("pilot-save").disabled=false;}
   }
@@ -330,6 +332,7 @@
   $("pilot-delete").hidden=!currentCallId;
   window.RAJ_SELECTED_SUBJECT="";
   window.RAJ_CREDITS_AVAILABLE=false;
+  window.RAJ_CONSENT_APPROVED=false;
   window.RAJ_REFRESH_CALL_BUTTON=()=>setWorking(false);
     bind("pilot-verify",verify);
   $("pilot-access").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();verify();}});

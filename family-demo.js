@@ -37,6 +37,34 @@
     });
   }
   function move(step){state.step=step;remember();render();}
+  async function checkRegistrationAvailable(){
+    if(!API)throw Error('현재 어르신 등록 서비스를 이용할 수 없습니다.');
+    let response;
+    try{
+      response=await fetch(API+'/api/pilot/family/onboarding',{
+        cache:'no-store',
+        headers:{'X-RAJ-FAMILY-TOKEN':state.guestToken}
+      });
+    }catch{
+      throw Error('등록 서버에 연결할 수 없습니다.');
+    }
+    if(response.ok)return true;
+    const body=await response.json().catch(()=>({}));
+    if(response.status===404 && body.detail==='FAMILY_NOT_REGISTERED')return true;
+    // The legacy API also returns 404, but with "Not Found": don't collect
+    // private contact details when the matching registration API isn't deployed.
+    if(response.status===404 && body.detail==='Not Found')
+      throw Error('현재 어르신 등록 서비스를 이용할 수 없습니다.');
+    if(response.status>=500)
+      throw Error('등록 서버 점검 중입니다.');
+    throw Error('현재 어르신 등록을 진행할 수 없습니다.');
+  }
+  async function beginRegistration(){
+    const action=document.getElementById('family-start');
+    if(action)action.disabled=true;
+    try{await checkRegistrationAvailable();move(1);}
+    catch(e){tell(e.message);if(action)action.disabled=false;}
+  }
   async function request(path,options={}){
     if(!API)throw Error('서비스 연결을 확인할 수 없습니다.');
     let response;
@@ -58,7 +86,15 @@
         PAYHUB_UNAVAILABLE:'결제를 연결할 수 없습니다.',
         FAMILY_NOT_REGISTERED:'먼저 어르신을 등록해 주세요.'
       };
-      throw Error(errors[data.detail]||'처리하지 못했습니다. 다시 시도해 주세요.');
+      if(errors[data.detail])throw Error(errors[data.detail]);
+      if(response.status===404 && path==='/onboarding')
+        throw Error('현재 어르신 등록 서비스를 이용할 수 없습니다.');
+      if(response.status===404)throw Error('요청한 정보를 찾을 수 없습니다.');
+      if(response.status===422)throw Error('입력한 정보를 확인해 주세요.');
+      if(response.status===409)throw Error('현재 상태에서 진행할 수 없습니다.');
+      if(response.status===429)throw Error('이용 횟수를 초과했습니다.');
+      if(response.status>=500)throw Error('서버 오류가 발생했습니다. 관리자에게 문의해 주세요.');
+      throw Error('요청을 완료할 수 없습니다. 관리자에게 문의해 주세요.');
     }
     return data;
   }
@@ -87,6 +123,7 @@
     }
     const action=document.getElementById('family-register');action.disabled=true;
     try{
+      await checkRegistrationAvailable();
       await request('/onboarding',{method:'POST',body:JSON.stringify({
         guest_token:state.guestToken,guardian_name:state.family,
         guardian_phone:state.guardianPhone,elder_name:elder,elder_phone:phone,
@@ -168,8 +205,8 @@
   }
   function render(){
     if(state.step===0){
-      page('',button('시작하기','family-start'),false);
-      document.getElementById('family-start').onclick=()=>move(1);
+      page('',button('시작하기','family-start')+error,false);
+      document.getElementById('family-start').onclick=beginRegistration;
     }else if(state.step===1){
       page('가족 연락처','<form id="family-guardian-form" class="family-form">'+
         '<label for="family-name">이름</label>'+

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./receive.css?v=20261101-unified05">
   <script defer src="./config.js"></script>
   <script defer src="https://jssip.net/download/releases/jssip-3.10.0.min.js"></script>
-  <script defer src="./receive.js?v=21-auto-sip-retry"></script>
+  <script defer src="./receive.js?v=22-background-ring-readiness"></script>
 </head>
 <body>
   <main class="receiver">
@@ -21,6 +21,7 @@
       <h1 id="receiver-title">연결 준비</h1>
       <p id="receiver-note">잠시만 기다려 주세요.</p>
       <p id="receiver-push-status" class="push-status" role="status" hidden></p>
+      <button id="receiver-enable-notifications" class="action primary" type="button" hidden>잠금화면 전화 알림 켜기</button>
       <p id="receiver-sip-status" class="push-status" role="status" hidden></p>
       <button id="receiver-reconnect" class="action secondary" type="button" hidden>통화 연결 다시 하기</button>
       <div id="receiver-consent-panel" hidden>

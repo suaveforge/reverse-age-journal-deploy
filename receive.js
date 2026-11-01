@@ -49,6 +49,18 @@
  }
  function render(r){
    if(active)return;
+   const consentNeeded=Boolean(r.consent_required);
+   show('receiver-consent-panel',consentNeeded);
+   show('receiver-alert',!consentNeeded&&!bellAllowed);
+   if(consentNeeded){
+     title('안부 상담 안내','동의하시면 예약한 시간에 이 화면으로 상담 전화를 받을 수 있습니다.');
+     document.body.classList.remove('ringing');
+     stopBell();
+     show('receiver-incoming',false);
+     show('receiver-connected',false);
+     show('receiver-refresh',false);
+     return;
+   }
    const ring=r.ring;
    document.body.classList.remove('ringing');
    stopBell();
@@ -157,6 +169,21 @@
    await finalize();
    $('receiver-hangup').disabled=false;
  }
+ async function confirmElderConsent(){
+   if(!$('receiver-consent-check').checked){
+     error('AI 상담과 녹음 안내를 확인해 주세요.');
+     return;
+   }
+   const button=$('receiver-consent-confirm');button.disabled=true;
+   try{
+     await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
+     show('receiver-consent-panel',false);
+     error('');
+     await check();
+   }catch(e){error(pendingMessage(e));}
+   finally{button.disabled=false;}
+ }
+ $('receiver-consent-confirm').addEventListener('click',confirmElderConsent);
  $('receiver-alert').addEventListener('click',enableBell);
  $('receiver-answer').addEventListener('click',answer);
  $('receiver-decline').addEventListener('click',decline);

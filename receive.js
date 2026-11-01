@@ -10,6 +10,11 @@
   let durationTimer=0, activityTimer=0, callStartedAt=0, lastVoiceState='', speakerNeedsTap=false;
   let bellContext=null, bellOutput=null, bellTimer=0, bellAllowed=false;
   let sipUA=null,sipRegistered=false,sipSession=null,sipAudio=null,sipStarting=false;
+  let sipMode='LEGACY',incomingSip=null,pendingSip=null,sipAudioWatch=0;
+  let sipBoundPeers=new WeakSet(),sipConfigurationReady=false;
+  let notificationAnswerId=new URLSearchParams(location.search).get('action')==='answer'
+    ?new URLSearchParams(location.search).get('ring'):null;
+  if(!/^ring_[a-f0-9]{32}$/.test(notificationAnswerId||''))notificationAnswerId=null;
   let homeReturnTimer=0;
   function returnHomeAfterCall(){
     if(homeReturnTimer)return;
@@ -52,7 +57,7 @@
     if(!('serviceWorker' in navigator)||!('PushManager' in window)){
       pushFeedback(pushUnavailableText());return false;
     }
-    await navigator.serviceWorker.register('./service-worker.js?v=2',{scope:'/'});
+    await navigator.serviceWorker.register('./service-worker.js?v=3-ontalk-sip',{scope:'/'});
     const reg=await navigator.serviceWorker.ready;
     pushRegistration=reg;
     const worker=reg.active||reg.waiting||reg.installing;
@@ -75,7 +80,7 @@
   async function setupExistingPush(){
     if(!('serviceWorker' in navigator))return;
     try{
-      await navigator.serviceWorker.register('./service-worker.js?v=2',{scope:'/'});
+      await navigator.serviceWorker.register('./service-worker.js?v=3-ontalk-sip',{scope:'/'});
       const reg=await navigator.serviceWorker.ready;
       pushRegistration=reg;
       const active=reg.active||reg.waiting||reg.installing;
@@ -92,6 +97,106 @@
   const show=(id,visible)=>{$(id).hidden=!visible;};
   const error=message=>{show('receiver-error',!!message);$('receiver-error').textContent=message||'';};
   const messageOf=e=>String(e?.message||e||'연결 오류').replace(/[<>{}]/g,'');
+  function sipState(message='',retry=false){
+    const label=$('receiver-sip-status'),button=$('receiver-reconnect');
+    if(label){label.textContent=message;label.hidden=!message;}
+    if(button)button.hidden=!retry;
+  }
+  function maybeAnswerNotification(){
+    if(!notificationAnswerId||phase!=='ringing'||ringId!==notificationAnswerId)return;
+    notificationAnswerId=null;
+    try{history.replaceState(null,'',location.pathname+location.hash);}catch(_){}
+    answer();
+  }
+  function notifySipRinging(){
+    if(!document.hidden||!('Notification' in window)||Notification.permission!=='granted'||!pushRegistration)return;
+    pushRegistration.showNotification('기쁜사이 전화가 왔어요',{
+      body:'AI 안부전화입니다. 전화 받기를 누르세요.',
+      tag:'raj-call-'+ringId,renotify:true,requireInteraction:true,silent:false,
+      vibrate:[500,180,500,180,900],data:{ring_id:ringId},
+      actions:[{action:'answer',title:'전화 받기'},{action:'decline',title:'거절'}]
+    }).catch(()=>{});
+  }
+  function ensureSipAudio(){
+    if(!sipAudio){
+      sipAudio=document.createElement('audio');
+      sipAudio.autoplay=true;sipAudio.playsInline=true;
+      sipAudio.setAttribute('playsinline','');
+      sipAudio.setAttribute('webkit-playsinline','');
+      sipAudio.style.display='none';document.body.appendChild(sipAudio);
+    }
+    sipAudio.muted=false;sipAudio.volume=1;return sipAudio;
+  }
+  function primeSipAudio(){
+    const audio=ensureSipAudio();
+    if(audio.srcObject){playSipAudio(true);return;}
+    audio.src='data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQIAAAAAAA==';
+    try{
+      Promise.resolve(audio.play()).then(()=>{
+        if(!audio.srcObject){audio.pause();audio.removeAttribute('src');audio.load();}
+      }).catch(()=>{if(!audio.srcObject){audio.removeAttribute('src');audio.load();}});
+    }catch(_){}
+  }
+  function playSipAudio(userInitiated=false){
+    const audio=ensureSipAudio();
+    if(!audio.srcObject)return Promise.resolve(false);
+    let playback;
+    try{playback=audio.play();}catch(_){playback=Promise.reject();}
+    return Promise.resolve(playback).then(()=>{
+      speakerNeedsTap=false;show('receiver-sound',false);return true;
+    }).catch(()=>{
+      speakerNeedsTap=true;show('receiver-sound',true);
+      if(userInitiated)error('상대 음성을 재생하지 못했습니다. 휴대전화 미디어 음량을 확인해 주세요.');
+      return false;
+    });
+  }
+  function attachSipStream(stream,track){
+    if(!stream&&track&&window.MediaStream)stream=new MediaStream([track]);
+    if(!stream)return;
+    if(track&&stream.getTracks&&!stream.getTracks().includes(track))stream.addTrack(track);
+    const audio=ensureSipAudio();
+    if(audio.srcObject!==stream){audio.pause();audio.removeAttribute('src');audio.srcObject=stream;}
+    playSipAudio();
+  }
+  function syncSipReceivers(peer){
+    const tracks=peer?.getReceivers?.().map(item=>item?.track)
+      .filter(item=>item?.kind==='audio'&&item.readyState!=='ended')||[];
+    if(!tracks.length||!window.MediaStream)return;
+    const current=sipAudio?.srcObject;
+    const stream=current?.getTracks?current:new MediaStream();
+    tracks.forEach(track=>{if(!stream.getTracks().includes(track))stream.addTrack(track);});
+    attachSipStream(stream);
+  }
+  function bindSipPeer(peer){
+    if(!peer||sipBoundPeers.has(peer))return;
+    sipBoundPeers.add(peer);
+    peer.addEventListener?.('track',e=>attachSipStream(e.streams?.[0],e.track));
+    peer.addEventListener?.('addstream',e=>attachSipStream(e.stream));
+    peer.addEventListener?.('connectionstatechange',()=>syncSipReceivers(peer));
+    peer.addEventListener?.('iceconnectionstatechange',()=>syncSipReceivers(peer));
+    syncSipReceivers(peer);
+  }
+  function attachSipMedia(session){
+    clearInterval(sipAudioWatch);sipAudioWatch=0;sipBoundPeers=new WeakSet();
+    ensureSipAudio();
+    session.on('peerconnection',e=>bindSipPeer(e.peerconnection||session.connection));
+    bindSipPeer(session.connection);
+    const started=Date.now();
+    sipAudioWatch=setInterval(()=>{
+      if(sipSession!==session||Date.now()-started>20000){
+        clearInterval(sipAudioWatch);sipAudioWatch=0;return;
+      }
+      bindSipPeer(session.connection);syncSipReceivers(session.connection);
+    },250);
+  }
+  function clearSipMedia(){
+    clearInterval(sipAudioWatch);sipAudioWatch=0;sipBoundPeers=new WeakSet();
+    if(sipAudio){try{sipAudio.pause();}catch(_){}
+      sipAudio.srcObject=null;sipAudio.removeAttribute('src');sipAudio.remove();sipAudio=null;
+    }
+    speakerNeedsTap=false;
+  }
+
 
   // iOS Safari requires an explicit tap to unlock audio. Elder consent is
   // already that gesture; do not demand an additional bell-enable button.
@@ -245,7 +350,7 @@
     updateMicActivity();
   }
   function render(result){
-    if(phase==='connecting'||phase==='in-call')return;
+    if(incomingSip||phase==='connecting'||phase==='in-call')return;
     const consentRequired=Boolean(result.consent_required);
     show('receiver-consent-panel',consentRequired);
     if(consentRequired){
@@ -265,6 +370,7 @@
       show('receiver-alert',!bellAllowed);
       beginBell();
       title('전화가 왔어요','전화 받기를 눌러 주세요.');
+      maybeAnswerNotification();
       return;
     }
     stopBell();phase='idle';
@@ -322,7 +428,8 @@
   async function unlockSpeaker(){
     if(!client)return;
     try{
-      await client.startAudioPlayback();
+      const result=await client.startAudioPlayback();
+      if(result===false)throw Error('AUDIO_BLOCKED');
       speakerNeedsTap=false;show('receiver-sound',false);
       error('');
     }catch(e){error('소리를 켤 수 없습니다. 기기 음량을 확인해 주세요.');}
@@ -337,28 +444,112 @@
     finalize(false);
     returnHomeAfterCall();
   }
-  async function initializeAsteriskSip(){
-    if(sipUA||sipStarting||!window.JsSIP)return;
-    sipStarting=true;
+
+  function terminateSip(session,code=486){
+    try{session.terminate({status_code:code,reason_phrase:code===486?'Busy Here':'Temporarily Unavailable'});}
+    catch(_){try{session.terminate();}catch(__){}}
+  }
+  async function receiveSipSession(data){
+    const session=data?.session;
+    if(!session||data.originator!=='remote')return;
+    if(incomingSip||pendingSip||active||phase==='connecting'){
+      terminateSip(session);return;
+    }
+    pendingSip=session;
     try{
-      const result=await fetch(BASE+'/api/pilot/receiver/sip/setup',{
+      // ONTALK's normal extension can be dialed by other ONTALK members.
+      // Only the journal's active, consent-authorized ring may be shown.
+      const status=await api('status');
+      if(pendingSip!==session)return;
+      if(status.consent_required||status.ring?.status!=='RINGING'){
+        terminateSip(session,480);return;
+      }
+      incomingSip=session;sipSession=session;ringId=status.ring.id;
+      session.on('accepted',()=>sipConnected(session));
+      session.on('confirmed',()=>sipConnected(session));
+      session.on('ended',()=>sipFinished(session,false));
+      session.on('failed',e=>sipFinished(session,true,e?.cause));
+      session.on('muted',()=>{micMuted=true;if(active)updateMicActivity();});
+      session.on('unmuted',()=>{micMuted=false;if(active)updateMicActivity();});
+      attachSipMedia(session);
+      phase='ringing';show('receiver-incoming',true);
+      document.body.classList.add('ringing');
+      title('전화가 왔어요','전화 받기를 눌러 주세요.');
+      beginBell();notifySipRinging();maybeAnswerNotification();
+    }catch(e){terminateSip(session,480);error(messageOf(e));}
+    finally{if(pendingSip===session)pendingSip=null;}
+  }
+  function sipConnected(session){
+    if(incomingSip!==session||phase==='in-call')return;
+    answered=true;callStartedAt=Date.now();sipSession=session;
+    syncSipReceivers(session.connection);playSipAudio();
+    startCallUI();
+  }
+  function sipFinished(session,failed=false,cause=''){
+    if(incomingSip!==session)return;
+    incomingSip=null;sipSession=null;clearSipMedia();
+    if(!answered&&!active){
+      stopBell();phase='idle';show('receiver-incoming',false);
+      if(failed)error('SIP 전화 연결 실패: '+String(cause||'연결 실패'));
+      check();return;
+    }
+    client=null;endClientCall();
+  }
+  async function answerIncomingSip(){
+    const session=incomingSip;
+    if(!session||phase!=='ringing')return;
+    phase='connecting';stopBell();show('receiver-incoming',false);
+    title('통화 연결 중','마이크 연결을 준비하고 있습니다.');
+    const button=$('receiver-answer');button.disabled=true;
+    try{
+      primeSipAudio();
+      session.answer({
+        mediaConstraints:{audio:true,video:false},
+        pcConfig:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]}
+      });
+      client={
+        stopCall:async()=>session.terminate(),
+        mute:()=>session.mute({audio:true}),
+        unmute:()=>session.unmute({audio:true}),
+        startAudioPlayback:()=>playSipAudio(true)
+      };
+      syncSipReceivers(session.connection);
+    }catch(e){
+      terminateSip(session);sipFinished(session,true,messageOf(e));
+      error('통화 연결 실패: '+messageOf(e));
+    }finally{button.disabled=false;}
+  }
+  async function initializeAsteriskSip(force=false){
+    if(active||incomingSip||sipStarting||!window.JsSIP)return;
+    if(sipUA&&!force)return;
+    if(force&&sipUA){try{sipUA.stop();}catch(_){}sipUA=null;sipRegistered=false;}
+    sipStarting=true;sipState('통화 서버 연결 중');
+    try{
+      const response=await fetch(BASE+'/api/pilot/receiver/sip/setup',{
         method:'POST',headers:{'X-RAJ-RECEIVER-TOKEN':token}
       });
-      if(!result.ok)return;
-      const cfg=await result.json();
-      if(!cfg.ready||!cfg.sip_uri||!cfg.sip_secret)return;
+      if(response.status===409){sipState('');return;}
+      if(!response.ok)throw Error('SIP_SETTINGS_'+response.status);
+      const cfg=await response.json();
+      sipMode=cfg.mode||'LEGACY';
+      sipConfigurationReady=Boolean(cfg.ready);
+      if(!cfg.ready||!cfg.sip_uri||!cfg.sip_secret){
+        sipState('통화 서버 내선 준비 중',true);return;
+      }
       const socket=new window.JsSIP.WebSocketInterface(cfg.websocket_url);
-      sipUA=new window.JsSIP.UA({
+      const ua=new window.JsSIP.UA({
         sockets:[socket],uri:cfg.sip_uri,password:cfg.sip_secret,
-        register:true,register_expires:120,session_timers:false,
-        display_name:'기쁜사이'
+        register:true,register_expires:120,session_timers:false,display_name:'기쁜사이'
       });
-      sipUA.on('registered',()=>{sipRegistered=true;});
-      sipUA.on('unregistered',()=>{sipRegistered=false;});
-      sipUA.on('registrationFailed',()=>{sipRegistered=false;});
-      sipUA.on('disconnected',()=>{sipRegistered=false;});
-      sipUA.start();
-    }catch(_){ /* Retell WebRTC remains the safe fallback until provisioned. */ }
+      sipUA=ua;
+      ua.on('connected',()=>{if(sipUA===ua)sipState('통화 서버 등록 중');});
+      ua.on('registered',()=>{if(sipUA===ua){sipRegistered=true;sipState('');}});
+      ua.on('unregistered',()=>{if(sipUA===ua){sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);}});
+      ua.on('registrationFailed',()=>{if(sipUA===ua){sipRegistered=false;sipState('통화 서버 등록에 실패했습니다.',true);}});
+      ua.on('disconnected',()=>{if(sipUA===ua){sipRegistered=false;sipState('통화 서버 연결이 끊겼습니다.',true);}});
+      ua.on('newRTCSession',receiveSipSession);
+      ua.start();
+    }catch(_){sipRegistered=false;sipState('통화 서버 연결에 실패했습니다.',true);}
     finally{sipStarting=false;}
   }
   async function answerViaAsterisk(){
@@ -383,11 +574,8 @@
       const info=await response.json();
       const userMedia=await mic;
       userMedia.getTracks().forEach(t=>t.stop());
-      sipAudio=new Audio();
-      sipAudio.autoplay=true;
-      sipAudio.playsInline=true;
-      sipAudio.style.display='none';
-      document.body.appendChild(sipAudio);
+      sipAudio=ensureSipAudio();
+      primeSipAudio();
       const session=sipUA.call(info.dial_uri,{
         mediaConstraints:{audio:true,video:false},
         pcConfig:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]},
@@ -400,24 +588,15 @@
         unmute:()=>session.unmute({audio:true}),
         startAudioPlayback:async()=>sipAudio.play()
       };
-      const attach=connection=>{
-        if(!connection||!connection.addEventListener)return;
-        connection.addEventListener('track',evt=>{
-          const stream=evt.streams?.[0]||new MediaStream([evt.track]);
-          sipAudio.srcObject=stream;
-          sipAudio.play().catch(()=>{show('receiver-sound',true);});
-        });
-      };
-      attach(session.connection);
-      session.on('peerconnection',e=>attach(e.peerconnection));
+      attachSipMedia(session);
       session.on('confirmed',()=>{if(sipSession===session)startCallUI();});
       session.on('accepted',()=>{if(sipSession===session)startCallUI();});
       session.on('ended',()=>{if(sipSession===session){
-        sipSession=null;sipAudio?.remove();sipAudio=null;endClientCall();
+        sipSession=null;clearSipMedia();endClientCall();
       }});
       session.on('failed',e=>{
         if(sipSession===session){
-          sipSession=null;sipAudio?.remove();sipAudio=null;
+          sipSession=null;clearSipMedia();
           stopBell();stopCallUI();active=false;phase='idle';client=null;
           title('통화 연결 실패','연결할 수 없습니다.');
           error(String(e?.cause||'SIP 연결 실패'));
@@ -435,7 +614,8 @@
 
   async function answer(){
     if(active||phase==='connecting'||!ringId)return;
-    if(sipRegistered){await answerViaAsterisk();return;}
+    if(incomingSip){await answerIncomingSip();return;}
+    if(sipRegistered&&sipMode!=='ONTALK_SHARED'){await answerViaAsterisk();return;}
     // The very first operation silences the ring. Never restart it in polling.
     phase='connecting';stopBell();
     const button=$('receiver-answer');button.disabled=true;
@@ -492,6 +672,8 @@
   }
   async function decline(){
     phase='idle';stopBell();
+    if(incomingSip){const session=incomingSip;incomingSip=null;sipSession=null;
+      terminateSip(session);clearSipMedia();}
     if(!ringId)return;
     try{
       await api('decline',{method:'POST',body:JSON.stringify({id:ringId})});
@@ -538,6 +720,7 @@
   }
 
   $('receiver-consent-confirm').addEventListener('click',confirmElderConsent);
+  $('receiver-reconnect').addEventListener('click',()=>initializeAsteriskSip(true));
   $('receiver-alert').addEventListener('click',enableBell);
   $('receiver-answer').addEventListener('click',answer);
   $('receiver-decline').addEventListener('click',decline);
@@ -553,6 +736,12 @@
   sessionStorage.setItem('raj.receiver.token',token);
   setupExistingPush();
   initializeAsteriskSip();
+  navigator.serviceWorker?.addEventListener('message',event=>{
+    const d=event.data||{};
+    if(d.type==='RAJ_RECEIVER_ANSWER'&&/^ring_[a-f0-9]{32}$/.test(d.ringId||'')){
+      notificationAnswerId=d.ringId;maybeAnswerNotification();
+    }
+  });
   sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
   sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
   check();

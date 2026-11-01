@@ -222,6 +222,13 @@
   function view(name) {
     // Demo family journey is independent of the unconfigured commercial backend.
     name=name==='operator'?'operator':'family';
+    if(name==='family'&&currentView==='operator'){
+      if(window.RAJ_IS_CALL_ACTIVE?.()){
+        alert('진행 중인 통화를 종료한 뒤 가족 화면으로 이동해 주세요.');
+        return;
+      }
+      window.RAJ_CLOSE_COUNSELOR_SESSION?.();
+    }
     currentView=name;
     document.querySelectorAll('[data-view]').forEach(b=>{const active=b.dataset.view===name;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     $('family-view').hidden=name!=='family';
@@ -248,6 +255,7 @@
     $('recipient-select').disabled=name!=='family';
     $('recipient-label').hidden=name!=='family';
     if(name==='operator')renderOperator().catch(e=>readyNotice(String(e.message||e)));
+    else window.dispatchEvent(new Event('raj:family-opened'));
   }
   async function init() {
     session=readSession();

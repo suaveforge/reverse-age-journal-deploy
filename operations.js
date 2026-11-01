@@ -68,6 +68,7 @@
     const person=data.subject;
     $('ops-consent-status').hidden=false;
     $('ops-consent-status').textContent=person.participant_consent ? '통화 동의 확인됨' : '어르신 통화 동의 확인 필요';
+    $('ops-consent-status').dataset.kind=person.participant_consent?'confirmed':'pending';
     previousRecurringConsent=Boolean(person.recurring_consent);
     previousParticipantConsent=Boolean(person.participant_consent);
     previousSharingConsent=Boolean(person.family_notifications_consent);
@@ -190,6 +191,7 @@
     window.RAJ_SELECTED_SUBJECT=selected;
     await showSubject();
     switchTab(activeTab);
+    if(activeTab==='call')await webRingStatus().catch(()=>{});
   }
   async function showSubject(){
     window.RAJ_SELECTED_SUBJECT=selected;
@@ -366,6 +368,41 @@
     $('ops-pay-copy').hidden=false;
     feedback('PayHub 결제 링크를 생성했습니다. 승인된 결제 완료 후 회기가 충전됩니다.');
   }
+  let lastWebRing='';
+  async function webRingStatus(){
+    if(!authorized||!selected)return;
+    const state=await request('/subjects/'+encodeURIComponent(selected)+'/web-ring');
+    const button=$('ops-web-ring');
+    const consent=Boolean(window.RAJ_CONSENT_APPROVED);
+    const credits=Boolean(window.RAJ_CREDITS_AVAILABLE);
+    const busy=['RINGING','CONNECTING','IN_CALL'].includes(state.ring_status);
+    button.disabled=!state.receiver_online||!consent||!credits||busy;
+    const message=state.ring_status==='RINGING'?'어르신 기기에 전화가 울리고 있습니다.':
+      state.ring_status==='CONNECTING'?'어르신이 전화를 받고 연결 중입니다.':
+      state.ring_status==='IN_CALL'?'어르신이 AI와 대화 중입니다.':
+      state.ring_status==='COMPLETED'?'통화가 종료됐습니다. 기록에서 일기를 검토해 주세요.':
+      state.ring_status==='DECLINED'?'어르신이 통화를 거절했습니다.':
+      state.ring_status==='MISSED'?'받지 않아 종료됐습니다. 다시 걸 수 있습니다.':
+      state.ring_status==='FAILED'?'통화 연결에 실패했습니다. 다시 걸 수 있습니다.':
+      !consent?'어르신 통화 동의 확인이 필요합니다.':
+      !credits?'잔여 체험 회기가 없습니다.':
+      state.receiver_online?'어르신 기기가 연결됐습니다. 웹전화를 걸 수 있습니다.':
+      '어르신 기기에서 보호자가 공유한 수신 링크를 먼저 열어주세요.';
+    $('ops-web-ring-status').textContent=message;
+    if(state.ring_status==='COMPLETED'&&lastWebRing!==state.ring_id){
+      lastWebRing=state.ring_id;
+      window.RAJ_RELOAD_DIARIES?.().catch(()=>{});
+    }
+  }
+  async function ringWeb(){
+    if(!selected)return;
+    const button=$('ops-web-ring');button.disabled=true;
+    try{
+      const result=await request('/subjects/'+encodeURIComponent(selected)+'/web-ring',{method:'POST'});
+      $('ops-web-ring-status').textContent=result.status==='RINGING'?'어르신께 웹전화 요청을 보냈습니다.':'연결 상태를 확인 중입니다.';
+      await webRingStatus();
+    }finally{await webRingStatus().catch(()=>{});}
+  }
   async function connected(){
     authorized=true;
     $('pilot-management').hidden=false;
@@ -373,6 +410,7 @@
     $('ops-report-month').value=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}).slice(0,7);
     await safe(reload);
     await safe(loadBilling);
+    await safe(webRingStatus);
     switchTab('info');
   }
   function bind(id,handler){$(id).addEventListener('click',()=>safe(handler));}
@@ -381,7 +419,7 @@
   bind('ops-confirm-consent',confirmConsent);
   bind('ops-new-person',()=>{
     creating=!creating;
-    $('ops-new-person').textContent=creating?'닫기':'+ 어르신 추가';
+    $('ops-new-person').textContent=creating?'닫기':'어르신 추가';
     switchTab('info');
   });
   document.querySelectorAll('[data-ops-tab]').forEach(button=>{
@@ -397,8 +435,10 @@
 
   bind('ops-trial',trial);
   bind('ops-book',book);
+  bind('ops-web-ring',ringWeb);
+  bind('ops-web-ring-refresh',webRingStatus);
   bind('ops-report',report);
-  bind('ops-refresh',reload);
+  bind('ops-refresh',async()=>{await reload();await window.RAJ_RELOAD_DIARIES?.();});
   bind('ops-report-copy',async()=>{
     await navigator.clipboard.writeText(lastReport);
     feedback('가족 보고서를 복사했습니다.');
@@ -407,6 +447,11 @@
     selected=e.target.value;
     safe(async()=>{await showSubject();switchTab(activeTab);});
   });
+  setInterval(()=>{
+    if(authorized&&selected&&activeTab==='call'&&!document.hidden){
+      webRingStatus().catch(()=>{});
+    }
+  },4500);
   window.addEventListener('raj:pilot-connected',connected);
   window.addEventListener('raj:pilot-disconnected',()=>{
     authorized=false;

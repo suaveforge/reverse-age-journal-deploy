@@ -1,0 +1,64 @@
+name: Verify real public family UI in desktop and mobile
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/live-family-browser-no-calls.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Real browser and live registration API, no fixture submission or payments
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m pip -q install playwright
+          cat >/tmp/raj-real-browser.py <<'PY'
+          from playwright.sync_api import sync_playwright,expect
+          URL='https://reverse-age-journal.suaveforge.com/'
+          with sync_playwright() as p:
+            browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+            for width,height in [(390,844),(1365,900)]:
+              ctx=browser.new_context(viewport={'width':width,'height':height},locale='ko-KR',timezone_id='Asia/Seoul')
+              page=ctx.new_page()
+              errors=[]
+              server_calls=[]
+              page.on('pageerror',lambda e: errors.append(str(e)))
+              page.on('response',lambda r: server_calls.append((r.request.method,r.status,r.url))
+                      if '/api/pilot/family/' in r.url else None)
+              page.goto(URL,wait_until='networkidle',timeout=45000)
+              expect(page.locator('#family-start')).to_be_visible()
+              expect(page.locator('#admin-entry')).to_be_visible()
+              assert page.evaluate('document.documentElement.scrollWidth')==width
+              page.locator('#family-start').click()
+              expect(page.locator('#family-name')).to_be_visible(timeout=15000)
+              assert any(m=='GET' and s==404 and path.endswith('/family/onboarding')
+                         for m,s,path in server_calls),server_calls
+              assert page.locator('#family-error:visible').count()==0
+              print('LIVE_UI_START_AND_API_'+('MOBILE' if width<600 else 'DESKTOP')+'=PASS',flush=True)
+              page.locator('#family-name').fill('브라우저 검증')
+              page.locator('#guardian-phone').fill('01000003941')
+              page.locator('#family-next').click()
+              expect(page.locator('#family-elder')).to_be_visible()
+              page.locator('#family-elder').fill('브라우저 검증 어르신')
+              page.locator('#family-phone').fill('01000003942')
+              expect(page.locator('#family-relationship')).to_be_visible()
+              expect(page.locator('#family-hour')).to_be_visible()
+              expect(page.locator('#family-information-consent')).to_be_visible()
+              assert page.evaluate('document.documentElement.scrollWidth')==width
+              assert not errors,errors
+              print('LIVE_UI_ELDER_FORM_'+('MOBILE' if width<600 else 'DESKTOP')+'=PASS',flush=True)
+              # Do not submit test personal data from the browser; API POST is
+              # independently exercised and cleaned in the live integration job.
+              page.locator('#admin-entry').click()
+              expect(page.locator('#counselor-pilot')).to_be_visible()
+              page.locator('#admin-entry').click()
+              expect(page.locator('#family-elder')).to_be_visible()
+              print('LIVE_UI_ADMIN_SWITCH_'+('MOBILE' if width<600 else 'DESKTOP')+'=PASS',flush=True)
+              ctx.close()
+            browser.close()
+          PY
+          python3 /tmp/raj-real-browser.py

@@ -11,6 +11,7 @@
   let authorized=false;
   let hasOutbox=false;
   let noticeTimer=null;
+  let previousRecurringConsent=false;
   const ticketLabels={TRIAL:'체험 충전',PURCHASE:'구매',COMPLETED_CALL:'통화 사용'};
   function switchTab(tab){
     if(!subjects.length && tab!=='info')tab='info';
@@ -63,10 +64,12 @@
     if(!data?.subject)return;
     const person=data.subject;
     $('ops-consent-status').hidden=false;
-    $('ops-consent-status').textContent=person.participant_consent && person.recurring_consent ? '동의 확인됨' : '어르신 동의 확인 필요';
+    $('ops-consent-status').textContent=person.participant_consent ? '통화 동의 확인됨' : '어르신 통화 동의 확인 필요';
+    previousRecurringConsent=Boolean(person.recurring_consent);
+    $('ops-confirm-consent').hidden=Boolean(person.participant_consent);
     const dial=$('ops-consent-dial');
     const phone=String(person.phone||'').trim();
-    const pending=!(person.participant_consent && person.recurring_consent);
+    const pending=!person.participant_consent;
     dial.hidden=!pending||!/^\+?[0-9]{9,16}$/.test(phone);
     dial.href=dial.hidden?'#':'tel:'+phone;
     dial.textContent='어르신께 전화하기';
@@ -88,9 +91,9 @@
     const participant=$('ops-edit-consent').checked;
     const repeat=$('ops-edit-recurring').checked;
     if(repeat&&!participant){feedback('통화 동의가 필요합니다.',true);return;}
-    if(participant&&repeat&&$('ops-consent-status').textContent!=='동의 확인됨' &&
+    if(participant&&repeat&&$('ops-consent-status').textContent!=='통화 동의 확인됨' &&
        !confirm('어르신에게 직접 AI 통화·녹음·기록 및 정기 전화 동의를 확인하셨습니까?'))return;
-    if(!repeat&&!confirm('자동 재통화를 끄면 예정된 자동 예약이 취소됩니다. 저장할까요?'))return;
+    if(!repeat&&previousRecurringConsent&&!confirm('자동 재통화를 끄면 예정된 자동 예약이 취소됩니다. 저장할까요?'))return;
     $('ops-save-profile').disabled=true;
     try{
       await request('/subjects/'+encodeURIComponent(selected),{
@@ -108,6 +111,12 @@
       await loadSubjects();
       feedback('저장 완료');
     }finally{$('ops-save-profile').disabled=false;}
+  }
+  async function confirmConsent(){
+    if(!selected){feedback('어르신을 먼저 선택해 주세요.',true);return;}
+    if(!confirm('어르신에게 직접 AI 통화·녹음·기록 동의를 확인하셨습니까? 자동 재통화는 별도 동의이며 여기서 켜지지 않습니다.'))return;
+    $('ops-edit-consent').checked=true;
+    await saveProfile();
   }
   const request=(path,options)=>window.RAJ_OPERATIONS_REQUEST(path,options);
   function feedback(message,bad=false){
@@ -340,6 +349,7 @@
   function bind(id,handler){$(id).addEventListener('click',()=>safe(handler));}
   bind('ops-add',addSubject);
   bind('ops-save-profile',saveProfile);
+  bind('ops-confirm-consent',confirmConsent);
   bind('ops-new-person',()=>{
     creating=!creating;
     $('ops-new-person').textContent=creating?'닫기':'+ 어르신 추가';

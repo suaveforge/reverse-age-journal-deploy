@@ -119,8 +119,8 @@
     const matched=/^([0-9]{2}):([0-9]{2})$/.exec(selectedTime);
     const hour=matched?Number(matched[1]):NaN;
     const minute=matched?Number(matched[2]):NaN;
-    if(!Number.isInteger(hour)||hour<9||hour>19||!Number.isInteger(minute)||minute<0||minute>59){
-      tell('통화 시간을 오전 9시부터 오후 7시 59분 사이로 지정해 주세요.');return;
+    if(!Number.isInteger(hour)||hour<0||hour>23||!Number.isInteger(minute)||minute<0||minute>59){
+      tell('통화 시간을 확인해 주세요.');return;
     }
     if(!elder||phone.length<10||phone.length>11){tell('어르신 이름과 전화번호를 확인해 주세요.');return;}
     if(phone===state.guardianPhone){tell('어르신 전화번호를 따로 입력해 주세요.');return;}
@@ -330,7 +330,7 @@
         '<select id="family-relationship">'+['부모님','조부모님','배우자','기타'].map(v=>
           '<option value="'+v+'" '+(state.relationship===v?'selected':'')+'>'+v+'</option>').join('')+'</select>'+
         '<label for="family-hour">통화 희망 시간</label>'+
-        '<input id="family-hour" type="time" min="09:00" max="19:59" step="60" value="'+preferredTime+'" required>'+
+        '<input id="family-hour" type="time" min="00:00" max="23:59" step="60" value="'+preferredTime+'" required>'+
         '<details class="family-more"><summary>대화 주제 (선택)</summary>'+
         '<textarea id="family-interests" maxlength="220" rows="2" placeholder="취미나 관심사">'+esc(state.interests)+'</textarea></details>'+
         '<label class="family-consent"><input id="family-share-request" type="checkbox">'+

@@ -1,0 +1,20 @@
+{
+  "id": "/receive.html",
+  "name": "기쁜사이 안부전화",
+  "short_name": "기쁜사이",
+  "description": "예약 시간에 잠금화면으로 안부전화를 받고 AI와 통화하는 기쁜사이 앱",
+  "lang": "ko-KR",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#fdfbf7",
+  "background_color": "#fdfbf7",
+  "icons": [
+    {
+      "src": "./phone-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

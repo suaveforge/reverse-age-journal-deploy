@@ -100,6 +100,30 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
     await audit(page,'05-counselor-'+tab+'-preview-'+label,width,height);
   }
   await page.close();
+  // A returning buyer must regain the same purchases and top-up control after session restore.
+  const buyer=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  await buyer.addInitScript(()=>{
+    localStorage.setItem('raj.family.account.v1','synthetic-verified-guardian-session-token-12345678');
+  });
+  await buyer.route('**/api/pilot/family/**',route=>{
+    const url=route.request().url();
+    const data=url.endsWith('/auth/session')?{authenticated:true,registered:true,phone_last4:'5678'}:
+      url.endsWith('/onboarding')?{registered:true,elder_name:'QA어르신',consent:'CONFIRMED',balance:4,share_requested:false,share_approved:false}:
+      url.endsWith('/account')?{registered:true,elder_name:'QA어르신',balance:4,purchases:[{id:'ord_fixture',sessions:5,amount_krw:1000,paid_at:'2026-11-01T12:00:00Z'}],usage:[{sessions:1,at:'2026-11-01T14:00:00Z'}]}:
+      url.endsWith('/summary')?{shared:false,reports:[]}:
+      url.endsWith('/payment-ready')?{ready:true,packages:[{code:'FIVE',sessions:5,price_krw:1000}]}:{};
+    route.fulfill({status:200,contentType:'application/json',
+      headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS'},
+      body:JSON.stringify(data)});
+  });
+  await buyer.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
+  await buyer.locator('#family-start').click();
+  await buyer.locator('#family-purchases').getByText('1,000원 · 5회').waitFor({state:'visible',timeout:12000});
+  if(!(await buyer.locator('#family-tickets').innerText()).includes('구매 5회 · 사용 1회'))
+    throw Error('Guardian account ledger does not reconcile visibly');
+  await buyer.locator('#family-open-plans').waitFor({state:'visible'});
+  await audit(buyer,'05-guardian-account-and-topup-'+label,width,height);
+  await buyer.close();
   const receiver=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   receiver.on('pageerror',err=>uncaught.push(err.message));
   await receiver.goto('http://127.0.0.1:8765/receive.html',{waitUntil:'domcontentloaded'});
@@ -137,6 +161,10 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   if(actual.leafWidth>160||actual.leafHeight>170||!actual.title.includes('내일의 일기가 됩니다'))
     throw Error('Live Pages differs from locked design: '+JSON.stringify(actual));
   await audit(live,'09-production-home-'+label,width,height);
+  // Opening the login form sends NO SMS; the OTP request button is untouched.
+  await live.locator('#family-start').click();
+  await live.locator('#family-login-form').waitFor({state:'visible',timeout:14000});
+  await audit(live,'10-production-guardian-login-'+label,width,height);
   await live.close();
 }
 await browser.close();

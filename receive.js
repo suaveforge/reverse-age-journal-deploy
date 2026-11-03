@@ -18,6 +18,8 @@
   if(!/^ring_[a-f0-9]{32}$/.test(notificationAnswerId||''))notificationAnswerId=null;
   let homeReturnTimer=0;
   function returnHomeAfterCall(){
+    // In the homepage receiver frame, keep the SIP connection alive.
+    if(window.parent!==window)return;
     if(homeReturnTimer)return;
     homeReturnTimer=setTimeout(()=>{window.location.replace('./');},1800);
   }
@@ -106,7 +108,22 @@
     $('receiver-title').textContent=heading;
     $('receiver-note').textContent=note||'';
   };
-  const show=(id,visible)=>{$(id).hidden=!visible;};
+  let parentUiQueued=false,lastParentUi='';
+  function queueParentUi(){
+    if(window.parent===window||parentUiQueued)return;
+    parentUiQueued=true;
+    queueMicrotask(()=>{
+      parentUiQueued=false;
+      const state=!$('receiver-connected').hidden?'in-call':
+        phase==='connecting'?'connecting':
+        !$('receiver-incoming').hidden?'ringing':
+        !$('receiver-consent-panel').hidden?'consent':'idle';
+      if(state===lastParentUi)return;
+      lastParentUi=state;
+      window.parent.postMessage({type:'RAJ_RECEIVER_UI',state},location.origin);
+    });
+  }
+  const show=(id,visible)=>{$(id).hidden=!visible;queueParentUi();};
   const error=message=>{show('receiver-error',!!message);$('receiver-error').textContent=message||'';};
   const messageOf=e=>String(e?.message||e||'연결 오류').replace(/[<>{}]/g,'');
   let lastSipDiagnostic='';
@@ -812,6 +829,18 @@
     finally{button.disabled=false;}
   }
 
+  window.addEventListener('message',e=>{
+    if(e.origin!==location.origin||window.parent===window||e.source!==window.parent)return;
+    const d=e.data||{};
+    if(d.type==='RAJ_RECEIVER_SHOW'){
+      if(phase==='ringing'||phase==='in-call'||phase==='connecting')queueParentUi();
+    }
+  });
+  document.querySelector('.brand-home')?.addEventListener('click',e=>{
+    if(window.parent===window)return;
+    e.preventDefault(); // Never recursively load the homepage inside its frame.
+    window.parent.postMessage({type:'RAJ_RECEIVER_CLOSE_REQUEST'},location.origin);
+  });
   $('receiver-consent-confirm').addEventListener('click',confirmElderConsent);
   $('receiver-enable-notifications')?.addEventListener('click',async()=>{
     // The permission prompt must originate in this physical tap.

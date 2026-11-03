@@ -151,7 +151,12 @@
       openReceiver();
       receiver.contentWindow?.postMessage({type:'RAJ_RECEIVER_SHOW'},location.origin);
     } else {
-      location.href='./receive.html'; // Do not fabricate an unpaired receiver.
+      (async()=>{
+        const reg=await navigator.serviceWorker.ready;
+        const token=await getStoredReceiverToken(reg.active||navigator.serviceWorker.controller);
+        if(validToken(token))location.assign('./receive.html#'+token);
+        else showPairingAction(); // Never navigate to an unusable empty receiver.
+      })().catch(()=>showPairingAction());
     }
   });
 

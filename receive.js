@@ -812,9 +812,8 @@
     }catch(e){error(messageOf(e));}
   }
   async function confirmElderConsent(){
-    if(!$('receiver-consent-check').checked){
-      error('AI 상담과 녹음 안내를 확인해 주세요.');return;
-    }
+    // The button itself is explicit informed consent. Do not require elders
+    // to find a second small checkbox after reading the clear summary above.
     const button=$('receiver-consent-confirm');button.disabled=true;
     // Start resume() during this user gesture: Safari does not grant it after fetch.
     const unlock=unlockBell().catch(()=>false);

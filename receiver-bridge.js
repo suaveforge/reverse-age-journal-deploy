@@ -42,6 +42,31 @@
       catch(_){finish('');}
     });
   }
+  function showPairingAction(){
+    // iOS copies cookies but not SW IndexedDB during Home Screen install.
+    // Pair once inside the installed app, using the existing guardian link.
+    if(!isStandalone||document.getElementById('raj-pwa-pair'))return;
+    const button=document.createElement('button');
+    button.id='raj-pwa-pair';
+    button.type='button';
+    button.textContent='안부전화 연결';
+    button.style.cssText='position:fixed;bottom:max(20px,env(safe-area-inset-bottom));'+
+      'right:16px;z-index:10000;background:#24522a;color:#fff;'+
+      'border:0;border-radius:12px;padding:16px 20px;font-size:18px;font-weight:700;';
+    button.addEventListener('click',()=>{
+      const pasted=window.prompt('문자로 받은 안부전화 연결 링크를 붙여넣어 주세요.');
+      if(!pasted)return;
+      let link;
+      try{link=new URL(pasted.trim(),location.href);}catch(_){link=null;}
+      const token=link?.hash.slice(1)||'';
+      if(link?.origin!==location.origin||link?.pathname!=='/receive.html'||!validToken(token)){
+        window.alert('보호자에게 받은 연결 링크를 확인해 주세요.');
+        return;
+      }
+      location.assign('./receive.html#'+token);
+    });
+    document.body.appendChild(button);
+  }
   function installFrame(token){
     overlay=document.createElement('div');
     overlay.id='raj-shared-call-receiver';
@@ -135,14 +160,21 @@
       const reg=await navigator.serviceWorker.register(
         './service-worker.js?v=4-home-bridge',{scope:'/'});
       await navigator.serviceWorker.ready;
-      const token=await getStoredReceiverToken(reg.active||navigator.serviceWorker.controller);
-      if(!validToken(token))return; // Ordinary visitor: never show phone UI.
+      const fromLink=location.hash.slice(1);
+      const token=validToken(fromLink)?fromLink:
+        await getStoredReceiverToken(reg.active||navigator.serviceWorker.controller);
+      if(!validToken(token)){showPairingAction();return;}
       const status=await fetch(API+'/api/pilot/receiver/status',{
         cache:'no-store',headers:{'X-RAJ-RECEIVER-TOKEN':token}
       });
-      if(!status.ok)return; // Revoked/expired capability cannot start SIP.
+      if(!status.ok){showPairingAction();return;}
       const data=await status.json();
       boundToken=token;
+      // A direct, consented homepage link also pairs the installed PWA.
+      if(validToken(fromLink)){
+        reg.active?.postMessage({type:'RAJ_RECEIVER_TOKEN',token});
+        history.replaceState(null,'',location.pathname+location.search);
+      }
       installFrame(boundToken);
       if(!data.consent_required)offerNotificationSetup(token,reg,Boolean(data.background_push_ready));
     }catch(_){

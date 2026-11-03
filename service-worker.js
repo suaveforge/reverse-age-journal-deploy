@@ -36,6 +36,16 @@ self.addEventListener('message',e=>{
   const d=e.data||{};
   if(d.type==='RAJ_RECEIVER_TOKEN'&&/^[a-f0-9]{64}$/.test(String(d.token||'')))
     e.waitUntil(store(KEY,d.token));
+  if(d.type==='RAJ_RECEIVER_GET_TOKEN'&&e.ports?.[0]){
+    e.waitUntil((async()=>{
+      // Only a same-origin, service-worker-controlled app page may request
+      // the previously paired device capability. Do not persist in localStorage.
+      let valid=false;
+      try{valid=new URL(e.source?.url||'').origin===self.location.origin;}catch(_){}
+      const token=valid?await read(KEY).catch(()=>null):null;
+      e.ports[0].postMessage({token:/^[a-f0-9]{64}$/.test(token||'')?token:''});
+    })());
+  }
 });
 self.addEventListener('push',e=>{
  e.waitUntil((async()=>{
@@ -47,9 +57,15 @@ self.addEventListener('push',e=>{
    const resp=await fetch(API+'/api/pilot/receiver/status',{
      headers:{'X-RAJ-RECEIVER-TOKEN':token},cache:'no-store'
    }).catch(()=>null);
-   if(!resp?.ok)return;
-   const state=await resp.json();
-   if(state.ring?.id!==payload.ring_id||state.ring?.status!=='RINGING')return;
+   if(resp?.ok){
+     const state=await resp.json().catch(()=>null);
+     if(state && (state.ring?.id!==payload.ring_id||
+       !['RINGING','SIP_DIALING','SIP_RINGING'].includes(state.ring?.status)))return;
+   } else if(resp && [401,403,410].includes(resp.status)){
+     return; // Revoked receiver capability.
+   }
+   // A temporarily unreachable API must not silently discard a genuine
+   // high-priority push event: iOS requires user-visible Web Push.
    const url='/receive.html#'+token;
    await self.registration.showNotification('기쁜사이 전화가 왔어요',{
      body:'AI 안부전화입니다. 전화 받기를 누르세요.',
@@ -84,10 +100,17 @@ self.addEventListener('notificationclick',e=>{
   for(const w of windows){
     if(new URL(w.url).origin!==self.location.origin)continue;
     // Never navigate an existing SIP receiver: navigation kills its live WSS session.
-    if(new URL(w.url).pathname==='/receive.html'){
+    const path=new URL(w.url).pathname;
+    if(path==='/receive.html'){
       if('focus' in w)await w.focus();
+      // The receiver will show its actual Answer button.
       if(answering)w.postMessage({type:'RAJ_RECEIVER_ANSWER',ringId:data.ring_id});
       return;
+    }
+    if(path==='/'||path==='/index.html'){
+      if('focus' in w)await w.focus();
+      w.postMessage({type:'RAJ_RECEIVER_OPEN',ringId:data.ring_id});
+      return; // Home already hosts an active same-origin receiver.
     }
     if('navigate' in w){try{await w.navigate(url);}catch(_){}}
     if('focus' in w)await w.focus();

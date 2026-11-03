@@ -113,7 +113,7 @@
     try{
       // Load the SDK BEFORE requesting the short-lived billable Retell access token.
       // A failed import must never create a paid call.
-      const sdk=await import("https://esm.sh/retell-client-js-sdk@2.0.8");
+      const sdk=await import("https://esm.sh/retell-client-js-sdk@3.0.2");
       const data=await api("/calls",{method:"POST",body:JSON.stringify({consent:true,subject_id:window.RAJ_SELECTED_SUBJECT})});
       currentCallId=data.call_id;
       $("pilot-delete").hidden=false;
@@ -134,7 +134,7 @@
         status("통화 연결 오류: "+errorMessage(e),"error");
         setWorking(false);
       });
-      await client.startCall({accessToken:data.access_token});
+      await client.startCall({accessToken:data.access_token,callId:data.call_id,transport:data.transport,iceServers:data.ice_servers});
       active=true;
       status("AI 통화 중입니다.","ok");
       setWorking(false);

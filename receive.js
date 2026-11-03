@@ -755,7 +755,7 @@
         if(client!==current)return;
         stopBell();error('통화 오류: '+messageOf(e));
       });
-      await current.startCall({accessToken:result.access_token,emitRawAudioSamples:true});
+      await current.startCall({accessToken:result.access_token,callId:result.call_id,transport:result.transport,iceServers:result.ice_servers,emitRawAudioSamples:true});
       if(!active&&phase==='connecting'){
         throw Error('음성 통화가 연결되지 않았습니다.');
       }
@@ -847,7 +847,7 @@
       notificationAnswerId=d.ringId;maybeAnswerNotification();
     }
   });
-  sdkPromise=import('https://esm.sh/retell-client-js-sdk@2.0.8');
+  sdkPromise=import('https://esm.sh/retell-client-js-sdk@3.0.2');
   sdkPromise.catch(()=>error('음성 연결 구성 요소를 불러오지 못했습니다. 네트워크를 확인해 주세요.'));
   check();
   setInterval(check,3500);

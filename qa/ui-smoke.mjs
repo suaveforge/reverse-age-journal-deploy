@@ -124,6 +124,55 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   await buyer.locator('#family-open-plans').waitFor({state:'visible'});
   await audit(buyer,'05-guardian-account-and-topup-'+label,width,height);
   await buyer.close();
+  // Restore a real historical guest without its old browser session.
+  // Synthetic SMS and orders only; nothing sent to Retell, PayHub or an elder.
+  const legacy=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  legacy.on('pageerror',err=>uncaught.push(err.message));
+  let recovered=false;
+  await legacy.route('**/api/pilot/family/**',route=>{
+    const url=route.request().url();
+    let status=200, data={};
+    if(url.endsWith('/auth/capabilities'))data={sms_available:true};
+    else if(url.endsWith('/auth/request'))data={requested:true,expires_in_seconds:300};
+    else if(url.endsWith('/auth/verify')){
+      const body=route.request().postDataJSON();
+      if(body.elder_phone==='01055556666' && body.guardian_name==='기존보호자'){
+        recovered=true;
+        data={authenticated:true,token:'synthetic-legacy-recovery-account-token-123456789',registered:true};
+      }else{
+        status=409;
+        data={detail:'LEGACY_ACCOUNT_REQUIRES_ORIGINAL_SESSION'};
+      }
+    }else if(url.endsWith('/onboarding')){
+      data=recovered
+        ?{registered:true,elder_name:'기존어르신',consent:'CONFIRMED',balance:4,share_requested:false,share_approved:false}
+        :{detail:'FAMILY_NOT_REGISTERED'};
+      if(!recovered)status=404;
+    }else if(url.endsWith('/account')){
+      data={registered:true,elder_name:'기존어르신',balance:4,
+        purchases:[{id:'old-purchase',sessions:5,amount_krw:1000,paid_at:'2026-11-01T12:00:00Z'}],
+        usage:[{sessions:1,at:'2026-11-02T12:00:00Z'}]};
+    }else if(url.endsWith('/summary'))data={shared:false,reports:[]};
+    else if(url.endsWith('/payment-ready'))data={ready:true,packages:[{code:'FIVE',sessions:5,price_krw:1000}]};
+    route.fulfill({status,contentType:'application/json',headers:{
+      'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*',
+      'Access-Control-Allow-Methods':'GET,POST,OPTIONS'},body:JSON.stringify(data)});
+  });
+  await legacy.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
+  await legacy.locator('#family-start').click();
+  await legacy.locator('#family-login-phone').fill('01012345678');
+  await legacy.locator('#family-request-code').click();
+  await legacy.locator('#family-login-code').fill('123456');
+  await legacy.locator('#family-confirm-code').click();
+  await legacy.locator('#family-recovery-form').waitFor({state:'visible',timeout:10000});
+  await audit(legacy,'05-legacy-recovery-form-'+label,width,height);
+  await legacy.locator('#family-recovery-name').fill('기존보호자');
+  await legacy.locator('#family-recovery-elder-phone').fill('01055556666');
+  await legacy.locator('#family-recovery-submit').click();
+  await legacy.locator('#family-purchases').getByText('1,000원 · 5회').waitFor({state:'visible',timeout:10000});
+  await legacy.locator('#family-open-plans').waitFor({state:'visible'});
+  await audit(legacy,'05-restored-buyer-ledger-'+label,width,height);
+  await legacy.close();
   const receiver=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   receiver.on('pageerror',err=>uncaught.push(err.message));
   await receiver.goto('http://127.0.0.1:8765/receive.html',{waitUntil:'domcontentloaded'});

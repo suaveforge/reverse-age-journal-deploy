@@ -169,6 +169,48 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   await legacy.locator('#family-open-plans').waitFor({state:'visible'});
   await audit(legacy,'05-restored-buyer-ledger-'+label,width,height);
   await legacy.close();
+  // Exercise the actual receiver JavaScript with a synthetic SIP_DIALING
+  // reservation, no registered customer, no PBX, no Retell or paid calls.
+  const scheduled=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  scheduled.on('pageerror',err=>uncaught.push(err.message));
+  await scheduled.addInitScript(()=>{
+    window.JsSIP={
+      WebSocketInterface:class{constructor(url){}},
+      UA:class{
+        constructor(cfg){this.handlers={}}
+        on(name,fn){this.handlers[name]=fn}
+        start(){setTimeout(()=>{this.handlers.connected?.();this.handlers.registered?.();},90)}
+        stop(){}
+        isConnected(){return true}
+        isRegistered(){return true}
+      }
+    };
+  });
+  await scheduled.route('**/api/pilot/receiver/**',route=>{
+    const url=route.request().url();
+    const payload=url.endsWith('/status')?
+      {online:true,consent_required:false,background_push_ready:false,
+        next_appointment_state:'WEB_RINGING',
+        ring:{id:'ring_'+'1'.repeat(32),status:'SIP_DIALING',expires_at:9999999999}}:
+      url.endsWith('/sip/setup')?
+      {ready:true,mode:'SIP',sip_uri:'sip:4000@localhost.invalid',
+        sip_secret:'synthetic-test-only',websocket_url:'wss://invalid.example.test'}:{};
+    route.fulfill({status:200,contentType:'application/json',headers:{
+      'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*',
+      'Access-Control-Allow-Methods':'GET,POST,OPTIONS'},body:JSON.stringify(payload)});
+  });
+  await scheduled.goto('http://127.0.0.1:8765/receive.html#'+'a'.repeat(64),
+                       {waitUntil:'domcontentloaded'});
+  await scheduled.locator('.receiver[data-call-state="dialing"]').waitFor({state:'visible',timeout:10000});
+  await scheduled.locator('#receiver-call-visual').waitFor({state:'visible'});
+  if(!(await scheduled.locator('#receiver-title').innerText()).includes('전화 연결 중'))
+    throw Error('Scheduled SIP state not surfaced as a call connection');
+  await audit(scheduled,'06-scheduled-SIP-dialing-'+label,width,height);
+  if(label==='mobile'){
+    await scheduled.locator('#receiver-reconnect').waitFor({state:'visible',timeout:25000});
+    await audit(scheduled,'06-scheduled-SIP-stalled-retry-'+label,width,height);
+  }
+  await scheduled.close();
   const receiver=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   receiver.on('pageerror',err=>uncaught.push(err.message));
   await receiver.goto('http://127.0.0.1:8765/receive.html',{waitUntil:'domcontentloaded'});

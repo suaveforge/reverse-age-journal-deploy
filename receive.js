@@ -17,6 +17,7 @@
     ?new URLSearchParams(location.search).get('ring'):null;
   if(!/^ring_[a-f0-9]{32}$/.test(notificationAnswerId||''))notificationAnswerId=null;
   let homeReturnTimer=0;
+  let pendingSipRingId='',pendingSipSince=0;
   function returnHomeAfterCall(){
     // In the homepage receiver frame, keep the SIP connection alive.
     if(window.parent!==window)return;
@@ -108,6 +109,14 @@
     $('receiver-title').textContent=heading;
     $('receiver-note').textContent=note||'';
   };
+  function callVisual(mode,label=''){
+    const root=document.querySelector('.receiver');
+    if(root)root.dataset.callState=mode;
+    const badge=$('receiver-call-stage'),visual=$('receiver-call-visual');
+    const visible=['waiting','dialing','incoming','error'].includes(mode);
+    if(visual)visual.hidden=!visible;
+    if(badge){badge.textContent=label||'전화 준비 중';badge.hidden=!visible;}
+  }
   let parentUiQueued=false,lastParentUi='';
   function queueParentUi(){
     if(window.parent===window||parentUiQueued)return;
@@ -384,6 +393,7 @@
     show('receiver-connected',true);
     show('receiver-sound',speakerNeedsTap);
     title('통화 중','');
+    callVisual('in-call');
     if(!callStartedAt)callStartedAt=Date.now();
     const updateDuration=()=>{
       const elapsed=Math.max(0,Math.floor((Date.now()-callStartedAt)/1000));
@@ -409,17 +419,32 @@
       show('receiver-alert',false);
       show('receiver-incoming',false);
       title('안부 상담 안내','동의하시면 예약 시간과 이후 3일마다 같은 시간에 웹전화를 받습니다.');
+      callVisual('consent');
       return;
     }
     const ring=result.ring;
     show('receiver-incoming',false);
     if(ring?.status==='SIP_DIALING'||ring?.status==='SIP_RINGING'){
+      if(pendingSipRingId!==ring.id){
+        pendingSipRingId=ring.id;
+        pendingSipSince=Date.now();
+      }
       if(ring.status==='SIP_RINGING')reportSipDiagnostic('SIP_INVITE_WAIT');
       stopBell();phase='idle';
       show('receiver-alert',false);
-      title('AI 전화 연결 중','잠시 후 전화가 울립니다.');
+      const elapsed=Date.now()-pendingSipSince;
+      const ready=sipRegistered&&sipUA?.isConnected?.()!==false;
+      const slow=elapsed>=18000;
+      callVisual('dialing',ready?'전화 신호 확인 중':'전화 기기 연결 중');
+      title(slow?'전화 연결이 늦어지고 있어요':'전화 연결 중이에요',
+        slow?'아래 버튼을 눌러 다시 연결할 수 있어요.':'이 화면을 켜 둔 채 기다려 주세요.');
+      if(slow){
+        $('receiver-reconnect').textContent='전화 연결 다시 하기';
+        show('receiver-reconnect',true);
+      }
       return;
     }
+    pendingSipRingId='';pendingSipSince=0;
     if(ring?.status==='RINGING'){
       phase='ringing';ringId=ring.id;
       if(lastRingId!==ring.id)lastRingId=ring.id;
@@ -428,7 +453,8 @@
       show('receiver-alert',!bellAllowed);
       beginBell();notifySipRinging();
       reportSipDiagnostic(bellAllowed?'WEB_RING_VISIBLE':'WEB_RING_SILENT');
-      title('전화가 왔어요','전화 받기를 눌러 주세요.');
+      title('전화가 왔어요','아래 버튼을 눌러 통화해 주세요.');
+      callVisual('incoming','전화가 왔어요');
       maybeAnswerNotification();
       return;
     }
@@ -436,22 +462,33 @@
     show('receiver-alert',!bellAllowed);
     if(ring?.status==='COMPLETED'){
       show('receiver-alert',false);
+      callVisual('finished');
       title('통화가 끝났어요','대화 기록이 저장됐습니다.');
     }else if(ring?.status==='NO_SPEECH'){
       show('receiver-alert',false);
+      callVisual('finished');
       title('통화가 끝났어요','대화 내용이 없어 회기를 차감하지 않았습니다.');
     }else if(ring?.status==='FAILED'){
       show('receiver-alert',false);
-      title('통화 연결 실패','통화가 완료되지 않았습니다.');
+      callVisual('error','통화 연결 실패');
+      title('전화가 연결되지 않았어요','보호자에게 통화 상태를 확인해 주세요.');
+    }else if(ring?.status==='MISSED'){
+      show('receiver-alert',false);
+      callVisual('error','전화를 놓쳤어요');
+      title('전화를 받지 못했어요','보호자에게 예약 상태를 확인해 주세요.');
     }else if(['CONNECTING','IN_CALL','ENDING'].includes(ring?.status)){
       show('receiver-alert',false);
+      callVisual('waiting','통화 상태 확인 중');
       title('통화 상태 확인 중','기록을 정리하고 있습니다.');
     }else if(result.next_appointment_state==='NEEDS_PAYMENT'){
+      callVisual('waiting','예약 확인');
       title('다음 전화 예약 대기','이용 회기가 없어 아직 전화가 예약되지 않았습니다.');
     }else if(!['WEB_SCHEDULED','WEB_RINGING','WEB_CONNECTING','WEB_CALLING'].includes(result.next_appointment_state)){
+      callVisual('waiting','예약 확인');
       title('예약된 전화가 없어요','보호자에게 예약 상태를 확인해 주세요.');
     }else{
-      title('전화 기다리는 중','예약 시간이 되면 AI 전화가 울립니다.');
+      callVisual('waiting','예약된 안부전화');
+      title('전화를 기다리고 있어요','예약 시간이 되면 여기에서 알릴게요.');
     }
   }
   async function check(){
@@ -462,7 +499,11 @@
       if(answered&&result.ring?.status==='IN_CALL')await finalize(false);
       else{render(result);error('');}
     }catch(e){
-      if(phase!=='ending'){title('연결을 확인해 주세요','네트워크 연결을 확인하세요.');error(messageOf(e));}
+      if(phase!=='ending'){
+        callVisual('error','네트워크 확인 필요');
+        title('연결 상태를 확인해 주세요','인터넷 연결을 확인해 주세요.');
+        error(messageOf(e));
+      }
     }finally{polling=false;}
   }
   async function finalize(force=true){
@@ -498,6 +539,7 @@
     stopBell();stopCallUI();active=false;phase='ending';
     client=null;answered=false;
     title('통화가 종료됐어요','메인화면으로 돌아갑니다.');
+    callVisual('finished');
     // The server continues persisting the diary independently of this page.
     // Do not keep an elder trapped on the call screen while it settles.
     finalize(false);
@@ -539,7 +581,8 @@
       phase='ringing';show('receiver-incoming',true);
       reportSipDiagnostic('SIP_INBOUND_RINGING');
       document.body.classList.add('ringing');
-      title('전화가 왔어요','전화 받기를 눌러 주세요.');
+      title('전화가 왔어요','아래 버튼을 눌러 통화해 주세요.');
+      callVisual('incoming','전화가 왔어요');
       beginBell();notifySipRinging();maybeAnswerNotification();
     }catch(e){terminateSip(session,480);error(messageOf(e));}
     finally{if(pendingSip===session)pendingSip=null;}
@@ -570,6 +613,7 @@
     if(!session||phase!=='ringing')return;
     phase='connecting';stopBell();show('receiver-incoming',false);
     title('통화 연결 중','마이크 연결을 준비하고 있습니다.');
+    callVisual('dialing','통화 연결 중');
     const button=$('receiver-answer');button.disabled=true;
     try{
       primeSipAudio();
@@ -670,6 +714,7 @@
     button.disabled=true;
     show('receiver-incoming',false);
     title('통화 연결 중','AI 상담사에게 연결하고 있습니다.');
+    callVisual('dialing','통화 연결 중');
     try{
       // Request microphone under a real user gesture before asynchronous APIs.
       const mic=navigator.mediaDevices.getUserMedia({audio:true});
@@ -733,6 +778,7 @@
     const button=$('receiver-answer');button.disabled=true;
     show('receiver-incoming',false);
     error('');title('통화 연결 중','마이크 사용을 허용해 주세요.');
+    callVisual('dialing','통화 연결 중');
     try{
       // Preflight mic permission within the Answer gesture, before network calls.
       if(navigator.mediaDevices?.getUserMedia){
@@ -852,7 +898,14 @@
     }catch(e){pushFeedback('알림 연결 실패: '+messageOf(e));}
     finally{button.disabled=false;}
   });
-  $('receiver-reconnect').addEventListener('click',()=>initializeAsteriskSip(true));
+  $('receiver-reconnect').addEventListener('click',()=>{
+    if(active||incomingSip||phase==='in-call'||phase==='connecting')return;
+    pendingSipSince=Date.now();
+    show('receiver-reconnect',false);
+    callVisual('dialing','다시 연결 중');
+    title('다시 연결하고 있어요','이 화면을 켜 둔 채 잠시 기다려 주세요.');
+    initializeAsteriskSip(true).catch(()=>{});
+  });
   $('receiver-alert').addEventListener('click',enableBell);
   $('receiver-answer').addEventListener('click',answer);
   $('receiver-decline').addEventListener('click',decline);
@@ -862,6 +915,7 @@
 
   if(!/^[0-9a-f]{64}$/.test(token)){
     title('연결 링크가 필요해요','보호자에게 웹전화 연결 링크를 받아 주세요.');
+    callVisual('error','연결 링크 확인');
     show('receiver-alert',false);
     return;
   }

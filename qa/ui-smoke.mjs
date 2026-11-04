@@ -217,8 +217,13 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
     throw Error('Scheduled SIP state not surfaced as a call connection');
   await audit(scheduled,'06-scheduled-SIP-dialing-'+label,width,height);
   if(label==='mobile'){
-    await scheduled.locator('#receiver-reconnect').waitFor({state:'visible',timeout:25000});
-    await audit(scheduled,'06-scheduled-SIP-stalled-retry-'+label,width,height);
+    // A failed PBX invite MUST never strand a user who opened the SMS link.
+    await scheduled.locator('#receiver-answer').waitFor({state:'visible',timeout:25000});
+    if((await scheduled.locator('#receiver-answer').innerText())!=='지금 전화 받기')
+      throw Error('Delayed SIP does not offer a direct web answer');
+    if(await scheduled.locator('#receiver-reconnect').isVisible())
+      throw Error('Broken SIP retries compete with the direct web answer');
+    await audit(scheduled,'06-scheduled-SIP-direct-answer-'+label,width,height);
   }
   await scheduled.close();
   const receiver=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});

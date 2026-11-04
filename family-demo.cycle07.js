@@ -30,6 +30,10 @@
       }
       // Previous browser-only forms never registered the elder or established consent.
       if(!old.registered && old.step>2)state.step=1;
+      // Historical OTP attempts made before SMS-only account adoption could
+      // leave step 11 persisted in this browser. Retry the existing OTP,
+      // never force the elder-details form after a refresh.
+      if(state.step===11)state.step=state.guardianPhone?10:9;
     }
   }catch{}
   if(!legacyToken)legacyToken=state.guestToken;

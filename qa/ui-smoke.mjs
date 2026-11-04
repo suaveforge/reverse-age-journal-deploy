@@ -258,6 +258,17 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   await live.locator('#family-login-form').waitFor({state:'visible',timeout:14000});
   await audit(live,'10-production-guardian-login-'+label,width,height);
   await live.close();
+  // Read-only production receiver: no fragment token -> no API call, no ring.
+  const publishedReceiver=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  await publishedReceiver.goto('https://reverse-age-journal.suaveforge.com/receive.html?ui-qa=20261104-waiting01',
+    {waitUntil:'domcontentloaded',timeout:24000});
+  await publishedReceiver.locator('#receiver-call-visual').waitFor({state:'visible',timeout:12000});
+  if(!(await publishedReceiver.locator('#receiver-title').innerText()).includes('연결 링크가 필요해요'))
+    throw Error('Production elder receiver did not load updated call-state module');
+  const face=await publishedReceiver.locator('.call-visual-disc').boundingBox();
+  if(!face||face.width<80)throw Error('Production call state icon is not visible');
+  await audit(publishedReceiver,'11-production-receiver-no-token-'+label,width,height);
+  await publishedReceiver.close();
 }
 await browser.close();
 console.log('UI_QA_PASS '+count+' screenshots including LIVE Pages; authenticated counselor and receiver states are local layout previews only; no paid call or payment.');

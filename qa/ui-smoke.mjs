@@ -173,6 +173,11 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   // reservation, no registered customer, no PBX, no Retell or paid calls.
   const scheduled=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   scheduled.on('pageerror',err=>uncaught.push(err.message));
+  await scheduled.route('https://jssip.net/**',route=>route.abort());
+  await scheduled.route('https://esm.sh/**',route=>route.fulfill({
+    status:200,contentType:'text/javascript',
+    headers:{'Access-Control-Allow-Origin':'*'},body:'export class RetellWebClient {}'
+  }));
   await scheduled.addInitScript(()=>{
     window.JsSIP={
       WebSocketInterface:class{constructor(url){}},

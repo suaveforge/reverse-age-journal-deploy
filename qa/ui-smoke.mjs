@@ -136,13 +136,11 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
     else if(url.endsWith('/auth/request'))data={requested:true,expires_in_seconds:300};
     else if(url.endsWith('/auth/verify')){
       const body=route.request().postDataJSON();
-      if(body.elder_phone==='01055556666' && body.guardian_name==='기존보호자'){
-        recovered=true;
-        data={authenticated:true,token:'synthetic-legacy-recovery-account-token-123456789',registered:true};
-      }else{
-        status=409;
-        data={detail:'LEGACY_ACCOUNT_REQUIRES_ORIGINAL_SESSION'};
-      }
+      if(body.phone!=='01012345678'||body.code!=='123456'
+          ||body.elder_phone || body.guardian_name)
+        throw Error('Legacy login unexpectedly requires elder details');
+      recovered=true;
+      data={authenticated:true,token:'synthetic-legacy-recovery-account-token-123456789',registered:true};
     }else if(url.endsWith('/onboarding')){
       data=recovered
         ?{registered:true,elder_name:'기존어르신',consent:'CONFIRMED',balance:4,share_requested:false,share_approved:false}
@@ -164,11 +162,9 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   await legacy.locator('#family-request-code').click();
   await legacy.locator('#family-login-code').fill('123456');
   await legacy.locator('#family-confirm-code').click();
-  await legacy.locator('#family-recovery-form').waitFor({state:'visible',timeout:10000});
-  await audit(legacy,'05-legacy-recovery-form-'+label,width,height);
-  await legacy.locator('#family-recovery-name').fill('기존보호자');
-  await legacy.locator('#family-recovery-elder-phone').fill('01055556666');
-  await legacy.locator('#family-recovery-submit').click();
+  await legacy.locator('#family-purchases').getByText('1,000원 · 5회').waitFor({state:'visible',timeout:10000});
+  if(await legacy.locator('#family-recovery-form').count())
+    throw Error('Extra elder details requested after SMS on a single existing account');
   await legacy.locator('#family-purchases').getByText('1,000원 · 5회').waitFor({state:'visible',timeout:10000});
   await legacy.locator('#family-open-plans').waitFor({state:'visible'});
   await audit(legacy,'05-restored-buyer-ledger-'+label,width,height);

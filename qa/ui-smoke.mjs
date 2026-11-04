@@ -171,7 +171,12 @@ for(const [label,width,height] of [['desktop',1248,900],['mobile',390,844]]){
   await legacy.close();
   // Exercise the actual receiver JavaScript with a synthetic SIP_DIALING
   // reservation, no registered customer, no PBX, no Retell or paid calls.
-  const scheduled=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  const scheduled=await browser.newPage({
+    viewport:{width,height},deviceScaleFactor:1,
+    userAgent:label==='mobile'
+      ?'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.0.0 Mobile/15E148 Safari/604.1'
+      :undefined
+  });
   scheduled.on('pageerror',err=>uncaught.push(err.message));
   await scheduled.route('https://jssip.net/**',route=>route.abort());
   await scheduled.route('https://esm.sh/**',route=>route.fulfill({

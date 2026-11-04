@@ -8,7 +8,9 @@
   const KEY='raj.family.walkthrough.v2';
   const AUTH_KEY='raj.family.account.v1';
   const storedAccount=localStorage.getItem(AUTH_KEY)||'';
-  let legacyToken='';
+  const LEGACY_KEY='raj.family.legacy.v1';
+  let legacyToken=localStorage.getItem(LEGACY_KEY)||'';
+  let pendingRecoveryCode='';
 
   const blank=()=>({
     step:0, family:'',guardianPhone:'',elder:'',phone:'',relationship:'부모님',
@@ -21,11 +23,16 @@
     const old=JSON.parse(sessionStorage.getItem(KEY)||'null');
     if(old&&typeof old.guestToken==='string'&&old.guestToken.length>=32){
       state={...state,...old};
+      // Remember the ORIGINAL registered guest key before the new login overwrites it.
+      if(old.registered && old.guestToken!==storedAccount){
+        legacyToken=old.guestToken;
+        try{localStorage.setItem(LEGACY_KEY,legacyToken);}catch{}
+      }
       // Previous browser-only forms never registered the elder or established consent.
       if(!old.registered && old.step>2)state.step=1;
     }
   }catch{}
-  legacyToken=state.guestToken;
+  if(!legacyToken)legacyToken=state.guestToken;
   if(storedAccount){state.guestToken=storedAccount;state.step=0;}
   const remember=()=>{try{sessionStorage.setItem(KEY,JSON.stringify(state));}catch{}};
   const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -124,6 +131,15 @@
       state.guardianPhone=phone;move(10);
     }catch(e){tell(e.message);button.disabled=false;}
   }
+  async function finishFamilyLogin(result){
+    if(!result.authenticated||!result.token)throw Error('인증 결과를 확인할 수 없습니다.');
+    localStorage.setItem(AUTH_KEY,result.token);
+    localStorage.removeItem(LEGACY_KEY);
+    state.guestToken=result.token;legacyToken='';pendingRecoveryCode='';
+    state.accountVerified=true;state.registered=!!result.registered;
+    await checkRegistrationAvailable();
+    move(result.registered?8:1);
+  }
   async function confirmLoginCode(){
     const input=document.getElementById('family-login-code');
     const code=input.value.trim();
@@ -133,19 +149,37 @@
       const result=await request('/auth/verify',{method:'POST',body:JSON.stringify({
         phone:state.guardianPhone,code,legacy_token:legacyToken||null
       })});
-      if(!result.authenticated||!result.token)throw Error('인증 결과를 확인할 수 없습니다.');
-      localStorage.setItem(AUTH_KEY,result.token);
-      state.guestToken=result.token;legacyToken='';state.accountVerified=true;
-      state.registered=!!result.registered;
-      await checkRegistrationAvailable();
-      move(result.registered?8:1);
-    }catch(e){tell(e.message);button.disabled=false;}
+      await finishFamilyLogin(result);
+    }catch(e){
+      if(e.code==='LEGACY_ACCOUNT_REQUIRES_ORIGINAL_SESSION'){
+        pendingRecoveryCode=code;move(11);return;
+      }
+      tell(e.message);button.disabled=false;
+    }
+  }
+  async function recoverFamilyAccount(){
+    const code=document.getElementById('family-recovery-code').value.trim();
+    const guardian_name=document.getElementById('family-recovery-name').value.trim();
+    const elder_phone=phoneDigits(document.getElementById('family-recovery-elder-phone').value);
+    if(!/^[0-9]{6}$/.test(code)){tell('문자로 받은 인증번호 6자리를 입력해 주세요.');return;}
+    if(!guardian_name||!/^(01[016789])[0-9]{7,8}$/.test(elder_phone)){
+      tell('기존에 등록한 보호자 이름과 어르신 전화번호를 확인해 주세요.');return;
+    }
+    const action=document.getElementById('family-recovery-submit');
+    action.disabled=true;
+    try{
+      const result=await request('/auth/verify',{method:'POST',body:JSON.stringify({
+        phone:state.guardianPhone,code,legacy_token:legacyToken||null,
+        guardian_name,elder_phone
+      })});
+      await finishFamilyLogin(result);
+    }catch(e){tell(e.message);action.disabled=false;}
   }
   async function logOutAccount(){
     await request('/auth/logout',{method:'POST',body:'{}'}).catch(()=>{});
     localStorage.removeItem(AUTH_KEY);
     sessionStorage.removeItem(KEY);
-    state=blank();legacyToken=state.guestToken;move(0);
+    state=blank();legacyToken=state.guestToken;pendingRecoveryCode='';move(0);
   }
   async function request(path,options={}){
     if(!API)throw Error('서비스 연결을 확인할 수 없습니다.');
@@ -174,10 +208,15 @@
         OTP_RATE_LIMITED:'인증 요청 횟수를 초과했습니다.',
         OTP_INVALID:'인증번호가 올바르지 않습니다.',
         OTP_EXPIRED_OR_LOCKED:'인증번호가 만료됐습니다. 다시 요청해 주세요.',
-        LEGACY_ACCOUNT_REQUIRES_ORIGINAL_SESSION:'기존 가입 정보가 있습니다. 처음 가입한 기기로 인증하거나 고객센터에 문의해 주세요.',
+        LEGACY_ACCOUNT_REQUIRES_ORIGINAL_SESSION:'기존 가입 정보 확인이 필요합니다.',
+        LEGACY_RECOVERY_DETAILS_NOT_MATCHED:'등록 당시 이름과 어르신 전화번호가 일치하지 않습니다.',
         GUARDIAN_PHONE_NOT_VERIFIED:'인증된 휴대폰 번호와 다릅니다.'
       };
-      if(errors[data.detail])throw Error(errors[data.detail]);
+      if(errors[data.detail]){
+        const failure=new Error(errors[data.detail]);
+        failure.code=data.detail;
+        throw failure;
+      }
       if(response.status===401)throw Error('FAMILY_LOGIN_REQUIRED');
       if(response.status===404 && path==='/onboarding')
         throw Error('현재 어르신 등록 서비스를 이용할 수 없습니다.');
@@ -443,6 +482,17 @@
         button('확인','family-confirm-code')+error+'</form>',false);
       document.getElementById('family-code-form').onsubmit=e=>{e.preventDefault();confirmLoginCode();};
       document.getElementById('family-confirm-code').onclick=confirmLoginCode;
+    }else if(state.step===11){
+      page('기존 가입 정보 확인','<form id="family-recovery-form" class="family-form">'+
+        '<label for="family-recovery-name">등록한 보호자 이름</label>'+
+        '<input id="family-recovery-name" autocomplete="name" maxlength="60" value="'+esc(state.family)+'" required>'+
+        '<label for="family-recovery-elder-phone">등록한 어르신 전화번호</label>'+
+        '<input id="family-recovery-elder-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" required>'+
+        '<label for="family-recovery-code">문자로 받은 인증번호</label>'+
+        '<input id="family-recovery-code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" value="'+esc(pendingRecoveryCode)+'" required>'+
+        button('내 정보로 들어가기','family-recovery-submit')+error+'</form>',false);
+      document.getElementById('family-recovery-form').onsubmit=e=>{e.preventDefault();recoverFamilyAccount();};
+      document.getElementById('family-recovery-submit').onclick=recoverFamilyAccount;
     }else if(state.step===1){
       page('가족 연락처','<form id="family-guardian-form" class="family-form">'+
         '<label for="family-name">이름</label>'+

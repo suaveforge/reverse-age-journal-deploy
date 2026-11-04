@@ -152,3 +152,121 @@ body,.receiver{background:#fdfbf7;color:#003c28}
 .receiver header .brand-home strong{color:inherit}
 .receiver header .brand-home:hover{text-decoration:underline}
 .receiver header .brand-home:focus-visible{outline:3px solid #358155;outline-offset:5px;border-radius:4px}
+
+
+/* Elder scheduled-call visual: a calm, readable live telephone state.
+   Decorative rings encode the real status only. All buttons are real actions. */
+.receiver .brand-home{gap:9px}
+.receiver .receiver-brand-mark{display:block;flex:none;width:35px;height:35px}
+.receiver header{min-height:77px;align-items:center;padding-bottom:18px}
+.receiver header strong{font-size:clamp(27px,6vw,34px);letter-spacing:-.07em}
+.receiver header small{font-size:clamp(14px,3.75vw,18px);font-weight:700;color:#5c7966}
+.receiver .center{gap:13px;padding:30px 0 48px}
+.receiver .call-visual{
+  position:relative;isolation:isolate;display:grid;place-items:center;
+  align-self:center;width:clamp(164px,47vw,196px);height:clamp(164px,47vw,196px);
+  margin:0 auto 13px;
+}
+.receiver .call-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:2px solid #dcebdd;opacity:.85;pointer-events:none;
+}
+.receiver .call-ring-inner{inset:15px;border:1.5px solid #c5dfc8;opacity:.82}
+.receiver .call-visual-disc{
+  position:relative;z-index:1;display:grid;place-items:center;
+  width:clamp(116px,33vw,137px);height:clamp(116px,33vw,137px);
+  border-radius:50%;background:#e6f2e3;color:#075a36;
+  box-shadow:inset 0 0 0 1px #d5e7d3,0 6px 25px rgba(6,70,41,.055);
+}
+.receiver .call-handset{width:clamp(51px,14vw,62px);height:clamp(51px,14vw,62px)}
+.receiver .call-stage{
+  display:inline-flex;align-items:center;justify-content:center;
+  align-self:center;gap:10px;width:auto;min-height:39px;
+  padding:8px 18px;margin:0 0 4px;border-radius:999px;
+  border:1px solid #dbe8d8;background:#f1f7ef;
+  color:#276648!important;font-size:clamp(17px,4.5vw,20px);
+  font-weight:800;line-height:1.2;
+}
+.receiver .call-stage::before{
+  content:"";width:9px;height:9px;flex:none;
+  border-radius:50%;background:#4c9b5b;
+}
+.receiver .center h1{
+  font-size:clamp(32px,8.2vw,47px);line-height:1.24;
+  letter-spacing:-.062em;margin:9px 0 3px;
+  word-break:keep-all;overflow-wrap:normal;
+}
+.receiver #receiver-note{
+  color:#607867;font-size:clamp(20px,5vw,25px);
+  line-height:1.55;font-weight:700;margin:0 0 12px;
+  word-break:keep-all;text-wrap:balance;
+}
+.receiver #receiver-sip-status:not([hidden]),
+.receiver #receiver-push-status:not([hidden]){
+  margin:0 0 6px;font-size:clamp(17px,4.3vw,20px);
+  line-height:1.5;color:#738374;font-weight:650;word-break:keep-all;
+}
+.receiver #receiver-reconnect:not([hidden]){
+  min-height:68px;padding:12px 19px;font-size:clamp(20px,5vw,25px);
+  max-width:420px;align-self:center;margin-top:14px;
+}
+.receiver[data-call-state="dialing"] .call-visual-disc{
+  background:#eaf5e7;
+}
+.receiver[data-call-state="incoming"] .call-visual-disc{
+  background:#055c38;color:white;
+  box-shadow:0 8px 27px rgba(5,92,56,.18);
+}
+.receiver[data-call-state="incoming"] .call-stage{
+  background:#055c38;border-color:#055c38;color:white!important;
+}
+.receiver[data-call-state="incoming"] .call-stage::before{background:#c2edbd}
+.receiver[data-call-state="error"] .call-stage{
+  background:#fff4f2;border-color:#e7ceca;color:#984b42!important;
+}
+.receiver[data-call-state="error"] .call-stage::before{background:#b56c61}
+.receiver[data-call-state="error"] .call-visual-disc{background:#fff3ee;color:#974b41}
+.receiver[data-call-state="incoming"] #receiver-incoming{margin-top:10px}
+.receiver[data-call-state="incoming"] #receiver-answer{
+  background:#055c38;border-color:#055c38;color:white;
+  min-height:99px;box-shadow:0 7px 25px rgba(5,92,56,.13);
+}
+.receiver[data-call-state="incoming"] #receiver-decline{
+  min-height:68px;font-size:clamp(20px,5vw,25px);border-color:transparent;
+}
+.receiver[data-call-state="consent"] .center{
+  justify-content:flex-start;padding-top:clamp(38px,8vh,80px)
+}
+.receiver #receiver-error:not([hidden]){
+  margin-top:9px;word-break:keep-all;border:0;
+  background:#fff4f1;border-radius:13px;padding:12px 14px;
+}
+@media(prefers-reduced-motion:no-preference){
+  @keyframes receiver-breathe {
+    0%,100%{transform:scale(1);opacity:.65}
+    50%{transform:scale(1.08);opacity:.17}
+  }
+  .receiver[data-call-state="dialing"] .call-ring-outer{
+    animation:receiver-breathe 2.5s ease-in-out infinite;
+  }
+  .receiver[data-call-state="incoming"] .call-ring{
+    animation:receiver-breathe 1.15s ease-in-out infinite;
+  }
+  .receiver[data-call-state="incoming"] .call-ring-inner{animation-delay:-.55s}
+}
+@media(max-width:420px){
+  .receiver{padding:18px 20px 26px}
+  .receiver header{min-height:73px}
+  .receiver .center{padding:22px 0 38px;gap:11px}
+  .receiver .call-visual{width:168px;height:168px;margin-bottom:11px}
+  .receiver .call-visual-disc{width:119px;height:119px}
+  .receiver .center h1{font-size:clamp(30px,8.3vw,37px)}
+  .receiver #receiver-note{font-size:clamp(19px,4.9vw,22px)}
+  .receiver #receiver-reconnect:not([hidden]){font-size:22px;min-height:66px}
+}
+@media(max-height:650px){
+  .receiver .center{padding:18px 0;gap:7px}
+  .receiver .call-visual{width:130px;height:130px;margin-bottom:3px}
+  .receiver .call-visual-disc{width:94px;height:94px}
+  .receiver .call-handset{width:42px;height:42px}
+}

@@ -17,7 +17,7 @@
     ?new URLSearchParams(location.search).get('ring'):null;
   if(!/^ring_[a-f0-9]{32}$/.test(notificationAnswerId||''))notificationAnswerId=null;
   let homeReturnTimer=0;
-  let pendingSipRingId='',pendingSipSince=0;
+  let pendingSipRingId='',pendingSipSince=0,pendingWebFallback=false;
   function returnHomeAfterCall(){
     // In the homepage receiver frame, keep the SIP connection alive.
     if(window.parent!==window)return;
@@ -409,7 +409,8 @@
     const pushReady=Boolean(result.background_push_ready);
     // Optional background push must never gate foreground SIP call reception.
     const pushButton=$('receiver-enable-notifications');
-    if(pushButton)pushButton.hidden=needsConsent||pushReady||!canUseBackgroundPush();
+    if(pushButton)pushButton.hidden=needsConsent||pushReady||!canUseBackgroundPush()
+      ||['RINGING','SIP_DIALING','SIP_RINGING'].includes(result.ring?.status);
     if(!needsConsent&&pushReady)pushFeedback('');
     if(incomingSip||phase==='connecting'||phase==='in-call')return;
     const consentRequired=needsConsent;
@@ -432,20 +433,36 @@
       if(ring.status==='SIP_RINGING')reportSipDiagnostic('SIP_INVITE_WAIT');
       stopBell();phase='idle';
       show('receiver-alert',false);
-      const elapsed=Date.now()-pendingSipSince;
+      const serverUpdated=Date.parse(ring.updated_at||'');
+      const startedAgo=Number.isFinite(serverUpdated)
+        ?Math.max(0,Date.now()-serverUpdated):0;
+      const elapsed=Math.max(Date.now()-pendingSipSince,startedAgo);
       const ready=sipRegistered&&sipUA?.isConnected?.()!==false;
       const slow=elapsed>=18000;
-      callVisual('dialing',ready?'전화 신호 확인 중':'전화 기기 연결 중');
-      title(slow?'전화 연결이 늦어지고 있어요':'전화 연결 중이에요',
-        slow?'아래 버튼을 눌러 다시 연결할 수 있어요.':'이 화면을 켜 둔 채 기다려 주세요.');
       if(slow){
-        $('receiver-reconnect').textContent='전화 연결 다시 하기';
-        show('receiver-reconnect',true);
+        // The SMS link must remain useful even if the earlier PBX invite
+        // missed this device. WEB audio is created only on this Answer tap.
+        ringId=ring.id;
+        pendingWebFallback=true;
+        show('receiver-incoming',true);
+        show('receiver-decline',false);
+        $('receiver-answer').textContent='지금 전화 받기';
+        show('receiver-reconnect',false);
+        callVisual('dialing','전화 받기 준비됨');
+        title('바로 통화할 수 있어요','아래 버튼을 누르면 AI와 연결돼요.');
+      }else{
+        pendingWebFallback=false;
+        callVisual('dialing',ready?'전화 신호 확인 중':'전화 기기 연결 중');
+        title('전화 연결 중이에요','이 화면을 켜 둔 채 기다려 주세요.');
       }
       return;
     }
+    pendingWebFallback=false;
     pendingSipRingId='';pendingSipSince=0;
     if(ring?.status==='RINGING'){
+      pendingWebFallback=false;
+      $('receiver-answer').textContent='전화 받기';
+      show('receiver-decline',true);
       phase='ringing';ringId=ring.id;
       if(lastRingId!==ring.id)lastRingId=ring.id;
       document.body.classList.add('ringing');
@@ -570,6 +587,9 @@
         terminateSip(session,480);return;
       }
       incomingSip=session;sipSession=session;ringId=status.ring.id;
+      pendingWebFallback=false;
+      $('receiver-answer').textContent='전화 받기';
+      show('receiver-decline',true);
       sipAnsweredPosted=false;
       session.on('accepted',()=>sipConnected(session));
       session.on('confirmed',()=>sipConnected(session));
@@ -786,7 +806,10 @@
         stream.getTracks().forEach(track=>track.stop());
       }
       const sdk=await sdkPromise;
-      const result=await api('accept',{method:'POST',body:JSON.stringify({id:ringId})});
+      const result=await api('accept',{method:'POST',body:JSON.stringify({
+        id:ringId,web_fallback:pendingWebFallback
+      })});
+      pendingWebFallback=false;
       answered=true;callStartedAt=0;speakerNeedsTap=false;
       const current=new sdk.RetellWebClient();
       client=current;

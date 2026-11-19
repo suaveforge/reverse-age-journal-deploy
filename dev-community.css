@@ -72,3 +72,15 @@
  .raj-dev-chat-handle{cursor:default}
  .raj-dev-chat-log{padding-bottom:22px}
 }
+
+/* Paste/drop preview with removable attachments — shared in post and chat editors. */
+.raj-dev-pending-list{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;min-width:0}
+.raj-dev-pending-list[hidden]{display:none!important}
+.raj-dev-pending-file{display:flex;align-items:center;gap:9px;min-width:0;max-width:100%;border:1px solid #cddfca;border-radius:12px;padding:6px 8px;background:#edf5e9}
+.raj-dev-pending-preview{width:54px;height:54px;max-width:54px;max-height:54px;border-radius:8px;object-fit:cover;background:#dae7d8}
+.raj-dev-pending-info{min-width:0;flex:1}
+.raj-dev-pending-info strong{display:block;max-width:180px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.raj-dev-pending-info small{font-size:10px;color:#6d806f}
+.raj-dev-drag-over{outline:3px dashed #5f9a68!important;outline-offset:-4px;background:#f0faed!important}
+#raj-dev-chat-form .raj-dev-pending-list{max-height:145px;overflow:auto}
+#raj-dev-chat-form .raj-dev-pending-list:not([hidden]){border-top:1px dashed #cddfca;padding-top:7px}

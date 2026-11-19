@@ -70,6 +70,100 @@ function renderFiles(holder,files){
  }
  holder.append(wrap);
 }
+async function copyText(value){
+ const text=String(value||'');
+ if(!text)return;
+ try{
+  if(!navigator.clipboard?.writeText)throw Error('Clipboard API unavailable');
+  await navigator.clipboard.writeText(text);
+  toast('클립보드에 복사했습니다.');
+ }catch(_){
+  const input=node('textarea');
+  input.value=text;input.readOnly=true;
+  input.style.cssText='position:fixed;top:-10000px;left:-10000px';
+  document.body.append(input);input.focus();input.select();
+  let ok=false;try{ok=document.execCommand('copy');}catch{}
+  input.remove();
+  if(ok)toast('클립보드에 복사했습니다.');
+  else window.prompt('텍스트를 복사하세요.',text);
+ }
+}
+function clipboardFiles(event){
+ const result=[];
+ for(const item of Array.from(event.clipboardData?.items||[])){
+  if(item.kind==='file'){
+   const file=item.getAsFile();
+   if(file)result.push(file);
+  }
+ }
+ if(!result.length)result.push(...Array.from(event.clipboardData?.files||[]));
+ return result;
+}
+function attachmentPicker(form,input,holder,additional=()=>0){
+ const pending=[];
+ function clear(){
+  for(const entry of pending)if(entry.url)URL.revokeObjectURL(entry.url);
+  pending.length=0;input.value='';holder.replaceChildren();
+ }
+ function render(){
+  holder.replaceChildren();
+  holder.hidden=pending.length===0;
+  for(const entry of pending){
+   const row=node('div','raj-dev-pending-file');
+   const info=node('div','raj-dev-pending-info');
+   info.append(node('strong','',entry.file.name||'클립보드 이미지'));
+   info.append(node('small','',((entry.file.size/1048576)||0).toFixed(2)+' MB'));
+   if(entry.url){
+    let media;
+    if(entry.file.type.startsWith('image/')){media=node('img','raj-dev-pending-preview');media.alt='첨부 미리보기';media.src=entry.url;}
+    else if(entry.file.type.startsWith('video/')){media=node('video','raj-dev-pending-preview');media.src=entry.url;media.muted=true;media.controls=true;}
+    else if(entry.file.type.startsWith('audio/')){media=node('audio');media.src=entry.url;media.controls=true;}
+    if(media)row.append(media);
+   }
+   row.append(info,button('×','raj-dev-icon-button',()=>{
+    const index=pending.indexOf(entry);if(index>=0)pending.splice(index,1);
+    if(entry.url)URL.revokeObjectURL(entry.url);render();
+   }));
+   holder.append(row);
+  }
+ }
+ function addFiles(files){
+  const incoming=Array.from(files||[]).filter(x=>x instanceof File);
+  if(!incoming.length)return false;
+  if(pending.length+additional()+incoming.length>12){toast('첨부는 글/메시지당 최대 12개입니다.');return true;}
+  if(incoming.some(f=>f.size>100*1024*1024)){toast('파일당 최대 100MB까지 첨부할 수 있습니다.');return true;}
+  for(const file of incoming){
+   const duplicate=pending.some(p=>p.file.name===file.name&&p.file.size===file.size&&p.file.lastModified===file.lastModified);
+   if(duplicate)continue;
+   const preview=/^(image|video|audio)\//.test(file.type);
+   let url='';try{if(preview)url=URL.createObjectURL(file);}catch{}
+   pending.push({file,url});
+  }
+  render();return true;
+ }
+ input.addEventListener('change',()=>{addFiles(input.files);input.value='';});
+ form.addEventListener('paste',event=>{
+  const images=clipboardFiles(event);
+  if(!images.length)return;
+  event.preventDefault();addFiles(images);
+ });
+ const fileDrag=e=>Array.from(e.dataTransfer?.types||[]).includes('Files');
+ form.addEventListener('dragover',event=>{
+  if(!fileDrag(event))return;event.preventDefault();event.dataTransfer.dropEffect='copy';
+  form.classList.add('raj-dev-drag-over');
+ });
+ form.addEventListener('dragleave',event=>{
+  if(!form.contains(event.relatedTarget))form.classList.remove('raj-dev-drag-over');
+ });
+ form.addEventListener('drop',event=>{
+  if(!fileDrag(event))return;
+  event.preventDefault();form.classList.remove('raj-dev-drag-over');
+  addFiles(event.dataTransfer.files);
+ });
+ render();
+ return {pending,addFiles,clear,destroy:clear,files:()=>pending.map(p=>p.file)};
+}
+
 async function uploadSelected(files,buttonToDisable){
  const uploaded=[];
  if(files.length>12)throw Error('최대 12개까지 첨부할 수 있습니다.');

@@ -1,0 +1,741 @@
+{
+  "project": "p49",
+  "defaultLocale": "ko",
+  "supportedLocales": [
+    "ko",
+    "en",
+    "es"
+  ],
+  "entries": [
+    {
+      "ko": "기쁜사이",
+      "en": "Joyful Connection",
+      "es": "Vínculo Feliz"
+    },
+    {
+      "ko": "오늘의 대화가,",
+      "en": "Today's conversation",
+      "es": "La conversación de hoy"
+    },
+    {
+      "ko": "내일의 일기가 됩니다",
+      "en": "becomes tomorrow's diary",
+      "es": "se convierte en el diario de mañana"
+    },
+    {
+      "ko": "시작하기",
+      "en": "Get started",
+      "es": "Comenzar"
+    },
+    {
+      "ko": "관리자 접속하기",
+      "en": "Admin access",
+      "es": "Acceso de administrador"
+    },
+    {
+      "ko": "가족 화면",
+      "en": "Family view",
+      "es": "Vista familiar"
+    },
+    {
+      "ko": "가족",
+      "en": "Family",
+      "es": "Familia"
+    },
+    {
+      "ko": "상담사",
+      "en": "Counselor",
+      "es": "Asesor"
+    },
+    {
+      "ko": "로그인",
+      "en": "Sign in",
+      "es": "Iniciar sesión"
+    },
+    {
+      "ko": "로그아웃",
+      "en": "Sign out",
+      "es": "Cerrar sesión"
+    },
+    {
+      "ko": "이전",
+      "en": "Back",
+      "es": "Atrás"
+    },
+    {
+      "ko": "다음",
+      "en": "Next",
+      "es": "Siguiente"
+    },
+    {
+      "ko": "확인",
+      "en": "Confirm",
+      "es": "Confirmar"
+    },
+    {
+      "ko": "취소",
+      "en": "Cancel",
+      "es": "Cancelar"
+    },
+    {
+      "ko": "저장하기",
+      "en": "Save",
+      "es": "Guardar"
+    },
+    {
+      "ko": "저장",
+      "en": "Save",
+      "es": "Guardar"
+    },
+    {
+      "ko": "등록하기",
+      "en": "Register",
+      "es": "Registrar"
+    },
+    {
+      "ko": "등록 완료",
+      "en": "Registration complete",
+      "es": "Registro completado"
+    },
+    {
+      "ko": "가족 등록하기",
+      "en": "Register family",
+      "es": "Registrar familia"
+    },
+    {
+      "ko": "가족 연락처",
+      "en": "Family contact",
+      "es": "Contacto familiar"
+    },
+    {
+      "ko": "보호자 이름",
+      "en": "Family contact name",
+      "es": "Nombre del familiar responsable"
+    },
+    {
+      "ko": "보호자 전화번호",
+      "en": "Family contact phone",
+      "es": "Teléfono del familiar responsable"
+    },
+    {
+      "ko": "보호자 휴대폰 번호",
+      "en": "Family contact mobile number",
+      "es": "Celular del familiar responsable"
+    },
+    {
+      "ko": "휴대폰 인증",
+      "en": "Verify mobile number",
+      "es": "Verificar celular"
+    },
+    {
+      "ko": "휴대폰 번호를 확인해 주세요.",
+      "en": "Please check your mobile number.",
+      "es": "Verifique su número de celular."
+    },
+    {
+      "ko": "인증번호 받기",
+      "en": "Send verification code",
+      "es": "Enviar código de verificación"
+    },
+    {
+      "ko": "인증번호 확인",
+      "en": "Verify code",
+      "es": "Verificar código"
+    },
+    {
+      "ko": "인증번호 6자리를 입력해 주세요.",
+      "en": "Enter the six-digit verification code.",
+      "es": "Ingrese el código de verificación de seis dígitos."
+    },
+    {
+      "ko": "문자로 받은 인증번호 6자리",
+      "en": "Six-digit code from SMS",
+      "es": "Código de seis dígitos recibido por SMS"
+    },
+    {
+      "ko": "문자로 받은 인증번호",
+      "en": "Verification code from SMS",
+      "es": "Código de verificación por SMS"
+    },
+    {
+      "ko": "이름",
+      "en": "Name",
+      "es": "Nombre"
+    },
+    {
+      "ko": "전화번호",
+      "en": "Phone number",
+      "es": "Número de teléfono"
+    },
+    {
+      "ko": "어르신 등록",
+      "en": "Register older adult",
+      "es": "Registrar a la persona mayor"
+    },
+    {
+      "ko": "어르신 이름",
+      "en": "Older adult's name",
+      "es": "Nombre de la persona mayor"
+    },
+    {
+      "ko": "어르신 전화번호",
+      "en": "Older adult's phone",
+      "es": "Teléfono de la persona mayor"
+    },
+    {
+      "ko": "관계",
+      "en": "Relationship",
+      "es": "Parentesco"
+    },
+    {
+      "ko": "부모님",
+      "en": "Parent",
+      "es": "Padre o madre"
+    },
+    {
+      "ko": "조부모님",
+      "en": "Grandparent",
+      "es": "Abuelo/a"
+    },
+    {
+      "ko": "배우자",
+      "en": "Spouse",
+      "es": "Cónyuge"
+    },
+    {
+      "ko": "기타",
+      "en": "Other",
+      "es": "Otro"
+    },
+    {
+      "ko": "통화 희망 시간",
+      "en": "Preferred call time",
+      "es": "Horario de llamada preferido"
+    },
+    {
+      "ko": "대화 주제 (선택)",
+      "en": "Conversation topics (optional)",
+      "es": "Temas de conversación (opcional)"
+    },
+    {
+      "ko": "취미나 관심사",
+      "en": "Hobbies or interests",
+      "es": "Pasatiempos o intereses"
+    },
+    {
+      "ko": "등록 정보를 상담 준비에 사용하는 데 동의",
+      "en": "I agree to the use of registration details to prepare for the call",
+      "es": "Acepto el uso de los datos registrados para preparar la llamada"
+    },
+    {
+      "ko": "어르신 동의 확인 후 가족에게 일기 공유 요청 (선택)",
+      "en": "Request diary sharing after confirming the older adult's consent (optional)",
+      "es": "Solicitar compartir el diario tras confirmar el consentimiento de la persona mayor (opcional)"
+    },
+    {
+      "ko": "어르신 동의 확인 후 이용할 수 있습니다.",
+      "en": "Available after the older adult gives consent.",
+      "es": "Disponible después del consentimiento de la persona mayor."
+    },
+    {
+      "ko": "어르신 통화 동의 확인 대기 중",
+      "en": "Waiting for call consent",
+      "es": "En espera del consentimiento para la llamada"
+    },
+    {
+      "ko": "등록 상태를 확인할 수 없습니다.",
+      "en": "Unable to check registration status.",
+      "es": "No se pudo verificar el estado del registro."
+    },
+    {
+      "ko": "이용권 선택",
+      "en": "Choose a call package",
+      "es": "Elegir un paquete de llamadas"
+    },
+    {
+      "ko": "이용권",
+      "en": "Call package",
+      "es": "Paquete de llamadas"
+    },
+    {
+      "ko": "이용권 구매는 준비 중입니다.",
+      "en": "Package purchases are not yet available.",
+      "es": "La compra de paquetes todavía no está disponible."
+    },
+    {
+      "ko": "이용권을 준비하고 있습니다.",
+      "en": "Call packages are being prepared.",
+      "es": "Se están preparando los paquetes de llamadas."
+    },
+    {
+      "ko": "이용권 충전",
+      "en": "Add call credits",
+      "es": "Recargar créditos de llamadas"
+    },
+    {
+      "ko": "결제",
+      "en": "Payment",
+      "es": "Pago"
+    },
+    {
+      "ko": "결제 내역",
+      "en": "Payment history",
+      "es": "Historial de pagos"
+    },
+    {
+      "ko": "사용 내역",
+      "en": "Usage history",
+      "es": "Historial de uso"
+    },
+    {
+      "ko": "결제하기",
+      "en": "Pay",
+      "es": "Pagar"
+    },
+    {
+      "ko": "결제 확인",
+      "en": "Check payment",
+      "es": "Verificar pago"
+    },
+    {
+      "ko": "테스트 결제 · 실제 청구 없음",
+      "en": "Test payment · no real charge",
+      "es": "Pago de prueba · sin cargo real"
+    },
+    {
+      "ko": "결제가 완료되지 않았습니다.",
+      "en": "Payment was not completed.",
+      "es": "El pago no se completó."
+    },
+    {
+      "ko": "결제 완료를 확인하고 있습니다.",
+      "en": "Checking payment status.",
+      "es": "Verificando el estado del pago."
+    },
+    {
+      "ko": "현재 결제를 이용할 수 없습니다.",
+      "en": "Payment is currently unavailable.",
+      "es": "Los pagos no están disponibles por el momento."
+    },
+    {
+      "ko": "현재 결제수단을 이용할 수 없습니다.",
+      "en": "This payment method is currently unavailable.",
+      "es": "Este método de pago no está disponible por el momento."
+    },
+    {
+      "ko": "결제 완료를 확인할 수 없습니다.",
+      "en": "Unable to verify payment completion.",
+      "es": "No se pudo verificar el pago."
+    },
+    {
+      "ko": "결제를 연결할 수 없습니다.",
+      "en": "Unable to connect to payment.",
+      "es": "No se pudo conectar al sistema de pagos."
+    },
+    {
+      "ko": "내 정보",
+      "en": "My account",
+      "es": "Mi cuenta"
+    },
+    {
+      "ko": "내 정보로 들어가기",
+      "en": "Go to my account",
+      "es": "Ir a mi cuenta"
+    },
+    {
+      "ko": "기존 가입 정보 확인",
+      "en": "Verify existing account",
+      "es": "Verificar cuenta existente"
+    },
+    {
+      "ko": "등록한 보호자 이름",
+      "en": "Registered family contact name",
+      "es": "Nombre del familiar registrado"
+    },
+    {
+      "ko": "등록한 어르신 전화번호",
+      "en": "Registered older adult's phone",
+      "es": "Teléfono registrado de la persona mayor"
+    },
+    {
+      "ko": "등록된 가족 정보를 찾지 못했습니다.",
+      "en": "We couldn't find your family registration.",
+      "es": "No encontramos su registro familiar."
+    },
+    {
+      "ko": "불러오는 중",
+      "en": "Loading",
+      "es": "Cargando"
+    },
+    {
+      "ko": "가족에게 공유된 일기",
+      "en": "Diaries shared with family",
+      "es": "Diarios compartidos con la familia"
+    },
+    {
+      "ko": "가족 일기 공유 요청",
+      "en": "Request family diary sharing",
+      "es": "Solicitar compartir el diario con la familia"
+    },
+    {
+      "ko": "가족 공유 중단",
+      "en": "Stop family sharing",
+      "es": "Dejar de compartir con la familia"
+    },
+    {
+      "ko": "가족 공유 동의 확인 대기 중입니다.",
+      "en": "Waiting for consent to share with family.",
+      "es": "En espera del consentimiento para compartir con la familia."
+    },
+    {
+      "ko": "상담 후 일기가 저장되면 이곳에서 볼 수 있습니다.",
+      "en": "Saved diaries will appear here after each call.",
+      "es": "Los diarios guardados aparecerán aquí después de cada llamada."
+    },
+    {
+      "ko": "일기를 가족에게 공유하려면 별도 동의가 필요합니다.",
+      "en": "Separate consent is required to share diaries with family.",
+      "es": "Se requiere un consentimiento adicional para compartir los diarios con la familia."
+    },
+    {
+      "ko": "통화 예약",
+      "en": "Schedule a call",
+      "es": "Programar una llamada"
+    },
+    {
+      "ko": "통화 일정",
+      "en": "Call schedule",
+      "es": "Agenda de llamadas"
+    },
+    {
+      "ko": "통화 일정 잡기",
+      "en": "Schedule a call",
+      "es": "Programar una llamada"
+    },
+    {
+      "ko": "통화 일정 등록",
+      "en": "Schedule a call",
+      "es": "Programar una llamada"
+    },
+    {
+      "ko": "예약하기",
+      "en": "Schedule",
+      "es": "Programar"
+    },
+    {
+      "ko": "예약 접수",
+      "en": "Booking received",
+      "es": "Reserva recibida"
+    },
+    {
+      "ko": "날짜와 시간",
+      "en": "Date and time",
+      "es": "Fecha y hora"
+    },
+    {
+      "ko": "통화 희망 날짜와 시간",
+      "en": "Preferred call date and time",
+      "es": "Fecha y hora preferidas para la llamada"
+    },
+    {
+      "ko": "날짜와 시간을 선택해 주세요.",
+      "en": "Choose a date and time.",
+      "es": "Elija una fecha y hora."
+    },
+    {
+      "ko": "통화 날짜를 확인해 주세요.",
+      "en": "Please check the call date.",
+      "es": "Revise la fecha de la llamada."
+    },
+    {
+      "ko": "내 이용 현황",
+      "en": "My activity",
+      "es": "Mi actividad"
+    },
+    {
+      "ko": "어르신 웹전화 연결 링크 만들기",
+      "en": "Create a web-call link for the older adult",
+      "es": "Crear un enlace de llamada web para la persona mayor"
+    },
+    {
+      "ko": "지정된 어르신 기기에서 링크를 열고 대기해 주세요.",
+      "en": "Open the link on the older adult's device and keep it ready.",
+      "es": "Abra el enlace en el dispositivo de la persona mayor y espere."
+    },
+    {
+      "ko": "링크 복사",
+      "en": "Copy link",
+      "es": "Copiar enlace"
+    },
+    {
+      "ko": "복사 완료",
+      "en": "Copied",
+      "es": "Copiado"
+    },
+    {
+      "ko": "이 기기에서 수신 열기",
+      "en": "Open receiver on this device",
+      "es": "Abrir receptor en este dispositivo"
+    },
+    {
+      "ko": "어르신께 링크 공유",
+      "en": "Share link with older adult",
+      "es": "Compartir enlace con la persona mayor"
+    },
+    {
+      "ko": "어르신 수신 링크",
+      "en": "Older adult call link",
+      "es": "Enlace de llamada de la persona mayor"
+    },
+    {
+      "ko": "기쁜사이 웹전화",
+      "en": "Joyful Connection web call",
+      "es": "Llamada web de Vínculo Feliz"
+    },
+    {
+      "ko": "우리 가족의 기록",
+      "en": "Our family's diary",
+      "es": "El diario de nuestra familia"
+    },
+    {
+      "ko": "전화로 나눈 하루,",
+      "en": "A day shared by phone,",
+      "es": "Un día compartido por teléfono,"
+    },
+    {
+      "ko": "일기로 남깁니다.",
+      "en": "remembered in a diary.",
+      "es": "guardado en un diario."
+    },
+    {
+      "ko": "어르신은 전화로 이야기하고, 가족은 일기로 읽습니다.",
+      "en": "Older adults share their day by phone; family members read it as a diary.",
+      "es": "Las personas mayores cuentan su día por teléfono y sus familias lo leen en un diario."
+    },
+    {
+      "ko": "상담사를 위한 관리 공간.",
+      "en": "Management space for counselors.",
+      "es": "Espacio de gestión para asesores."
+    },
+    {
+      "ko": "AI 통화 체험하기",
+      "en": "Try an AI call",
+      "es": "Probar una llamada con IA"
+    },
+    {
+      "ko": "첫 통화",
+      "en": "First call",
+      "es": "Primera llamada"
+    },
+    {
+      "ko": "어르신께 웹전화 걸기",
+      "en": "Call the older adult via web",
+      "es": "Llamar a la persona mayor por web"
+    },
+    {
+      "ko": "어르신께 전화하기",
+      "en": "Call the older adult",
+      "es": "Llamar a la persona mayor"
+    },
+    {
+      "ko": "어르신 선택",
+      "en": "Select older adult",
+      "es": "Seleccionar persona mayor"
+    },
+    {
+      "ko": "어르신을 선택하세요",
+      "en": "Choose an older adult",
+      "es": "Elija una persona mayor"
+    },
+    {
+      "ko": "어르신 추가",
+      "en": "Add older adult",
+      "es": "Agregar persona mayor"
+    },
+    {
+      "ko": "통화",
+      "en": "Call",
+      "es": "Llamada"
+    },
+    {
+      "ko": "기록",
+      "en": "Records",
+      "es": "Registros"
+    },
+    {
+      "ko": "예약됨",
+      "en": "Scheduled",
+      "es": "Programada"
+    },
+    {
+      "ko": "예약 없음",
+      "en": "No scheduled calls",
+      "es": "Sin llamadas programadas"
+    },
+    {
+      "ko": "예정된 통화가 없습니다.",
+      "en": "No upcoming calls.",
+      "es": "No hay próximas llamadas."
+    },
+    {
+      "ko": "아직 남겨진 일기가 없습니다.",
+      "en": "No diaries yet.",
+      "es": "Todavía no hay diarios."
+    },
+    {
+      "ko": "통화를 받으면 AI 상담이 시작됩니다. 통화·녹음 동의 후 이용해 주세요.",
+      "en": "The AI call starts when you answer. Please consent to the call and recording before proceeding.",
+      "es": "La llamada con IA comienza al contestar. Dé su consentimiento para la llamada y la grabación antes de continuar."
+    },
+    {
+      "ko": "어르신 안부전화",
+      "en": "Wellness check-in call",
+      "es": "Llamada de bienestar"
+    },
+    {
+      "ko": "연결 확인 중",
+      "en": "Checking connection",
+      "es": "Verificando conexión"
+    },
+    {
+      "ko": "연결 준비",
+      "en": "Getting ready to connect",
+      "es": "Preparando la conexión"
+    },
+    {
+      "ko": "잠시만 기다려 주세요.",
+      "en": "Please wait a moment.",
+      "es": "Espere un momento."
+    },
+    {
+      "ko": "잠금화면 전화 알림 켜기",
+      "en": "Enable lock-screen call alerts",
+      "es": "Activar avisos de llamadas en pantalla bloqueada"
+    },
+    {
+      "ko": "통화 연결 다시 하기",
+      "en": "Reconnect the call",
+      "es": "Reconectar la llamada"
+    },
+    {
+      "ko": "동의하고 전화 준비",
+      "en": "Consent and get ready for calls",
+      "es": "Dar consentimiento y prepararse para las llamadas"
+    },
+    {
+      "ko": "벨소리 켜기",
+      "en": "Enable ringtone",
+      "es": "Activar tono de llamada"
+    },
+    {
+      "ko": "전화 받기",
+      "en": "Answer call",
+      "es": "Contestar llamada"
+    },
+    {
+      "ko": "거절",
+      "en": "Decline",
+      "es": "Rechazar"
+    },
+    {
+      "ko": "통화 시간",
+      "en": "Call duration",
+      "es": "Duración de llamada"
+    },
+    {
+      "ko": "실시간 통화 상태",
+      "en": "Live call status",
+      "es": "Estado de llamada en tiempo real"
+    },
+    {
+      "ko": "듣는 중",
+      "en": "Listening",
+      "es": "Escuchando"
+    },
+    {
+      "ko": "나",
+      "en": "Me",
+      "es": "Yo"
+    },
+    {
+      "ko": "마이크 연결 중",
+      "en": "Connecting microphone",
+      "es": "Conectando micrófono"
+    },
+    {
+      "ko": "소리 켜기",
+      "en": "Enable audio",
+      "es": "Activar sonido"
+    },
+    {
+      "ko": "마이크 끄기",
+      "en": "Mute microphone",
+      "es": "Silenciar micrófono"
+    },
+    {
+      "ko": "통화 종료",
+      "en": "End call",
+      "es": "Finalizar llamada"
+    },
+    {
+      "ko": "가족이 AI 안부전화를 신청했습니다. 예약 시간과 이후 3일마다 같은 시간에 전화 알림을 받습니다. AI 대화 과정에서 음성을 처리하고 녹음·대화 기록을 만들 수 있습니다. 웹전화에 연결되지 않으면 문자로 전화받기 링크가 발송될 수 있습니다.",
+      "en": "Your family has requested AI wellness check-in calls. You will receive a call notification at the scheduled time and every three days thereafter at the same time. During AI conversations, audio may be processed and recorded, and a conversation record may be created. If the web call cannot connect, an answer link may be sent by text message.",
+      "es": "Su familia ha solicitado llamadas de bienestar con IA. Recibirá un aviso a la hora programada y, después, cada tres días a la misma hora. Durante la conversación con IA se podrá procesar y grabar audio y crear un registro de la conversación. Si la llamada web no se conecta, se podrá enviar un enlace para contestar por SMS."
+    },
+    {
+      "ko": "아래 버튼을 누르면 정기 안부전화, 음성 처리, 녹음에 동의합니다. 동의하지 않으면 누르지 않아도 됩니다.",
+      "en": "By pressing the button below, you consent to recurring check-in calls, audio processing, and recording. You do not have to press it if you do not consent.",
+      "es": "Al pulsar el botón de abajo, acepta las llamadas periódicas de bienestar, el procesamiento de audio y la grabación. Si no da su consentimiento, no tiene que pulsarlo."
+    },
+    {
+      "ko": "등록 서버 점검 중입니다.",
+      "en": "Registration service is under maintenance.",
+      "es": "El servicio de registro está en mantenimiento."
+    },
+    {
+      "ko": "서비스에 연결할 수 없습니다.",
+      "en": "Unable to connect to the service.",
+      "es": "No se pudo conectar al servicio."
+    },
+    {
+      "ko": "요청을 완료할 수 없습니다. 관리자에게 문의해 주세요.",
+      "en": "Unable to complete the request. Contact an administrator.",
+      "es": "No se pudo completar la solicitud. Comuníquese con un administrador."
+    },
+    {
+      "ko": "서버 오류가 발생했습니다. 관리자에게 문의해 주세요.",
+      "en": "A server error occurred. Contact an administrator.",
+      "es": "Se produjo un error del servidor. Comuníquese con un administrador."
+    },
+    {
+      "ko": "서비스 연결을 확인할 수 없습니다.",
+      "en": "Unable to verify the service connection.",
+      "es": "No se pudo verificar la conexión al servicio."
+    },
+    {
+      "ko": "어르신 등록은 완료됐습니다. 문자 발송 중계가 아직 설정되지 않아 안내 문자는 발송되지 않았습니다.",
+      "en": "Registration is complete, but the SMS relay is not configured, so no text message was sent.",
+      "es": "El registro está completo, pero el servicio de SMS aún no está configurado y no se envió ningún mensaje."
+    },
+    {
+      "ko": "문자 발송 여부를 확인할 수 없습니다. 중복 문자는 보내지 않았습니다.",
+      "en": "Unable to confirm whether the SMS was sent. No duplicate text was sent.",
+      "es": "No se pudo confirmar el envío del SMS. No se envió ningún mensaje duplicado."
+    },
+    {
+      "ko": "문자 발송 요청을 자동으로 전달했습니다. 어르신이 안내 문자를 열고 동의하시면 다음 단계로 넘어갑니다.",
+      "en": "The SMS request was forwarded. You can continue after the older adult opens the message and gives consent.",
+      "es": "Se ha enviado la solicitud de SMS. Podrá continuar cuando la persona mayor abra el mensaje y dé su consentimiento."
+    },
+    {
+      "ko": "로그인 정보 확인 또는 서버 연결에 실패했습니다:",
+      "en": "Sign-in verification or server connection failed:",
+      "es": "Falló la verificación del acceso o la conexión al servidor:"
+    },
+    {
+      "ko": "가족에게 더 이상 상담 기록을 공유하지 않을까요?",
+      "en": "Stop sharing call records with family?",
+      "es": "¿Dejar de compartir los registros de llamadas con la familia?"
+    }
+  ]
+}

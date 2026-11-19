@@ -736,6 +736,261 @@
       "ko": "가족에게 더 이상 상담 기록을 공유하지 않을까요?",
       "en": "Stop sharing call records with family?",
       "es": "¿Dejar de compartir los registros de llamadas con la familia?"
+    },
+    {
+      "ko": "✎ 건의 게시판",
+      "en": "✎ Suggestions",
+      "es": "✎ Sugerencias"
+    },
+    {
+      "ko": "◉ 공동 채팅",
+      "en": "◉ Team chat",
+      "es": "◉ Chat colaborativo"
+    },
+    {
+      "ko": "앱 설치·알림",
+      "en": "Install app · Alerts",
+      "es": "Instalar app · Avisos"
+    },
+    {
+      "ko": "함께 만드는 기쁜사이",
+      "en": "Build Joyful Connection together",
+      "es": "Construyamos Vínculo Feliz"
+    },
+    {
+      "ko": "건의 · 오류 · 개선 제안 / 개인정보·상담기록은 올리지 마세요",
+      "en": "Suggestions · Bugs · Improvements / Do not post personal or call records",
+      "es": "Sugerencias · Errores · Mejoras / No publique datos personales ni registros de llamadas"
+    },
+    {
+      "ko": "참여자",
+      "en": "Participant",
+      "es": "Participante"
+    },
+    {
+      "ko": "GPT 분석 링크",
+      "en": "GPT review link",
+      "es": "Enlace de análisis GPT"
+    },
+    {
+      "ko": "건의 검색",
+      "en": "Search suggestions",
+      "es": "Buscar sugerencias"
+    },
+    {
+      "ko": "+ 새 글",
+      "en": "+ New post",
+      "es": "+ Nueva publicación"
+    },
+    {
+      "ko": "건의를 선택하거나 새 글을 작성하세요.",
+      "en": "Choose a suggestion or create a new post.",
+      "es": "Seleccione una sugerencia o cree una publicación."
+    },
+    {
+      "ko": "건의 수정",
+      "en": "Edit suggestion",
+      "es": "Editar sugerencia"
+    },
+    {
+      "ko": "새로운 건의",
+      "en": "New suggestion",
+      "es": "Nueva sugerencia"
+    },
+    {
+      "ko": "건의 등록",
+      "en": "Post suggestion",
+      "es": "Publicar sugerencia"
+    },
+    {
+      "ko": "수정 저장",
+      "en": "Save changes",
+      "es": "Guardar cambios"
+    },
+    {
+      "ko": "제목",
+      "en": "Title",
+      "es": "Título"
+    },
+    {
+      "ko": "개선할 점, 오류 재현 방법, 원하는 기능을 자세히 적어주세요.",
+      "en": "Describe the improvement, steps to reproduce, or feature request.",
+      "es": "Describa la mejora, cómo reproducir el error o la función deseada."
+    },
+    {
+      "ko": "이미지·동영상·음성·PDF·ZIP 등 파일당 100MB, 한 글당 12개까지",
+      "en": "Images, video, audio, PDF, ZIP and more · 100MB/file, 12/post",
+      "es": "Imágenes, video, audio, PDF, ZIP y más · 100 MB/archivo, 12 por publicación"
+    },
+    {
+      "ko": "파일 선택",
+      "en": "Choose files",
+      "es": "Elegir archivos"
+    },
+    {
+      "ko": "댓글 남기기",
+      "en": "Write a comment",
+      "es": "Escribir un comentario"
+    },
+    {
+      "ko": "댓글",
+      "en": "Comments",
+      "es": "Comentarios"
+    },
+    {
+      "ko": "등록",
+      "en": "Post",
+      "es": "Publicar"
+    },
+    {
+      "ko": "수정",
+      "en": "Edit",
+      "es": "Editar"
+    },
+    {
+      "ko": "삭제",
+      "en": "Delete",
+      "es": "Eliminar"
+    },
+    {
+      "ko": "닫기",
+      "en": "Close",
+      "es": "Cerrar"
+    },
+    {
+      "ko": "공동개발 채팅",
+      "en": "Development chat",
+      "es": "Chat de desarrollo"
+    },
+    {
+      "ko": "메시지 입력 (Enter 전송)",
+      "en": "Message (Enter to send)",
+      "es": "Mensaje (Intro para enviar)"
+    },
+    {
+      "ko": "전송",
+      "en": "Send",
+      "es": "Enviar"
+    },
+    {
+      "ko": "새로운 개발 건의",
+      "en": "New development suggestion",
+      "es": "Nueva sugerencia de desarrollo"
+    },
+    {
+      "ko": "공동개발 새 채팅",
+      "en": "New development chat",
+      "es": "Nuevo mensaje de desarrollo"
+    },
+    {
+      "ko": "알림 허용",
+      "en": "Enable alerts",
+      "es": "Activar avisos"
+    },
+    {
+      "ko": "알림 켜짐",
+      "en": "Alerts on",
+      "es": "Avisos activados"
+    },
+    {
+      "ko": "알림 미지원",
+      "en": "Alerts unavailable",
+      "es": "Avisos no disponibles"
+    },
+    {
+      "ko": "알림 차단됨",
+      "en": "Alerts blocked",
+      "es": "Avisos bloqueados"
+    },
+    {
+      "ko": "앱에서 알림 켜기",
+      "en": "Enable alerts in app",
+      "es": "Activar avisos en la app"
+    },
+    {
+      "ko": "건의글",
+      "en": "Suggestion",
+      "es": "Sugerencia"
+    },
+    {
+      "ko": "선택한 게시글을 삭제할까요?",
+      "en": "Delete this post?",
+      "es": "¿Eliminar esta publicación?"
+    },
+    {
+      "ko": "이 글과 첨부파일, 댓글을 삭제할까요?",
+      "en": "Delete this post, attachments, and comments?",
+      "es": "¿Eliminar esta publicación, sus archivos y comentarios?"
+    },
+    {
+      "ko": "메시지와 첨부파일을 삭제할까요?",
+      "en": "Delete this message and attachments?",
+      "es": "¿Eliminar este mensaje y sus archivos adjuntos?"
+    },
+    {
+      "ko": "댓글을 삭제할까요?",
+      "en": "Delete this comment?",
+      "es": "¿Eliminar este comentario?"
+    },
+    {
+      "ko": "표시 이름을 변경했습니다.",
+      "en": "Display name updated.",
+      "es": "Nombre visible actualizado."
+    },
+    {
+      "ko": "등록된 건의가 없습니다. 첫 번째 제안을 남겨주세요.",
+      "en": "No suggestions yet. Share the first one.",
+      "es": "Todavía no hay sugerencias. Publique la primera."
+    },
+    {
+      "ko": "공동개발에서 사용할 이름",
+      "en": "Your display name",
+      "es": "Su nombre visible"
+    },
+    {
+      "ko": "동영상",
+      "en": "Video",
+      "es": "Video"
+    },
+    {
+      "ko": "첨부 이미지",
+      "en": "Attached image",
+      "es": "Imagen adjunta"
+    },
+    {
+      "ko": "첨부 파일",
+      "en": "Attachment",
+      "es": "Archivo adjunto"
+    },
+    {
+      "ko": "새 글",
+      "en": "New post",
+      "es": "Nueva publicación"
+    },
+    {
+      "ko": "GPT 검토 묶음",
+      "en": "GPT review batch",
+      "es": "Lote de revisión GPT"
+    },
+    {
+      "ko": "알림 연결이 정상적으로 작동합니다.",
+      "en": "Notifications are working.",
+      "es": "Las notificaciones funcionan."
+    },
+    {
+      "ko": "건의 게시판에 새로운 제안이 올라왔습니다.",
+      "en": "A new suggestion was submitted.",
+      "es": "Se publicó una nueva sugerencia."
+    },
+    {
+      "ko": "공동개발 채팅에 새 메시지가 있습니다.",
+      "en": "A new development chat message has arrived.",
+      "es": "Hay un nuevo mensaje en el chat de desarrollo."
+    },
+    {
+      "ko": "기쁜사이 알림 시험",
+      "en": "Joyful Connection notification test",
+      "es": "Prueba de avisos de Vínculo Feliz"
     }
   ]
 }

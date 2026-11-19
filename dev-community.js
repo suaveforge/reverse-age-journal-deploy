@@ -6,7 +6,7 @@ const SESSION_KEY='raj.dev.community.token.v1';
 const $=id=>document.getElementById(id);
 const node=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=String(text);return e;};
 const state={user:null,token:'',posts:[],messages:[],selected:null,board:false,chat:false,edit:null,chatTimer:0,chatSig:'',chatEditing:false};
-let sessionPromise=null,drag=null;
+let sessionPromise=null,drag=null,chatPicker=null;
 const date=s=>{try{return new Intl.DateTimeFormat(document.documentElement.lang||'ko',{dateStyle:'short',timeStyle:'short'}).format(new Date(s));}catch{return s;}};
 const errMap={DEV_RATE_LIMIT:'잠시 후 다시 작성해 주세요.',ATTACHMENT_TOO_LARGE_100MB:'파일당 최대 100MB까지 첨부할 수 있습니다.',ATTACHMENT_LIMIT:'한 번에 최대 12개까지 첨부할 수 있습니다.',DEV_SESSION_REQUIRED:'참여자 연결을 확인할 수 없습니다.'};
 function toast(message){
@@ -238,6 +238,9 @@ function setup(){
  $('raj-dev-name').onclick=ownName;
  $('raj-dev-chat-name').onclick=ownName;
  $('raj-dev-search').oninput=renderPostList;
+ const chatPreview=node('div','raj-dev-pending-list');chatPreview.setAttribute('aria-live','polite');
+ $('raj-dev-chat-files').after(chatPreview);
+ chatPicker=attachmentPicker($('raj-dev-chat-form'),$('raj-dev-chat-files'),chatPreview);
  $('raj-dev-chat-form').addEventListener('submit',sendChat);
  $('raj-dev-chat-input').addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('raj-dev-chat-form').requestSubmit();}
@@ -290,6 +293,7 @@ async function openPost(id,rerender=true){
   const post=await api('/posts/'+id);
   target.replaceChildren();
   const bar=node('div','raj-dev-toolbar');
+  bar.append(button('본문 복사','raj-dev-btn',()=>copyText(post.title+'\n\n'+post.body)));
   if(owner(post)){
    bar.append(button('수정','raj-dev-btn',()=>postEditor(post)),button('삭제','raj-dev-btn danger',async()=>{
     if(!window.confirm('이 글과 첨부파일, 댓글을 삭제할까요?'))return;
@@ -338,6 +342,8 @@ function postEditor(post=null){
  file.setAttribute('aria-label','이미지 영상 문서 파일 첨부');
  const hint=node('small','','이미지·동영상·음성·PDF·ZIP 등 파일당 100MB, 한 글당 12개까지');
  const existing=node('div','raj-dev-files');const retained=new Set((post?.files||[]).map(f=>f.id));
+ const preview=node('div','raj-dev-pending-list');preview.setAttribute('aria-live','polite');
+ const picker=attachmentPicker(form,file,preview,()=>retained.size);
  (post?.files||[]).forEach(f=>{
   const row=node('span','raj-dev-file');row.append(node('span','',f.name));
   row.append(button('×','raj-dev-icon-button',()=>{retained.delete(f.id);row.remove();}));
@@ -345,16 +351,19 @@ function postEditor(post=null){
  });
  const actions=node('div','raj-dev-toolbar');
  const save=button(post?'수정 저장':'건의 등록','raj-dev-btn primary');save.type='submit';
- actions.append(save,button('취소','raj-dev-btn',()=>post?openPost(post.id):target.replaceChildren()));
- form.append(title,body,file,hint,existing,actions);
+ actions.append(save,button('취소','raj-dev-btn',()=>{
+  picker.destroy();
+  if(post)void openPost(post.id);else target.replaceChildren();
+ }));
+ form.append(title,body,file,hint,existing,preview,actions);
  form.addEventListener('submit',async e=>{
   e.preventDefault();if(!title.value.trim())return;
   save.disabled=true;
   try{
-   const ids=await uploadSelected([...file.files],null);
+   const ids=await uploadSelected(picker.files(),null);
    const payload={title:title.value,body:body.value,file_ids:[...retained,...ids]};
    const res=await api(post?'/posts/'+post.id:'/posts',post?'PATCH':'POST',payload);
-   await refreshBoard();await openPost(res.id);
+   picker.clear();await refreshBoard();await openPost(res.id);
    toast(post?'건의를 수정했습니다.':'건의를 등록했습니다.');
   }catch(e){toast('저장 실패 · '+e.message);}finally{save.disabled=false;}
  });
@@ -372,7 +381,9 @@ async function refreshChat(force=false){
  for(const message of messages){
   const bubble=node('article','raj-dev-msg'+(owner(message)?' mine':''));
   bubble.append(dateMeta(message),node('p','',message.body));
+  const copy=button('복사','raj-dev-link',()=>copyText(message.body));
   renderFiles(bubble,message.files);
+  bubble.append(copy);
   if(owner(message)){
    const tools=node('div','raj-dev-toolbar');
    tools.style.marginBottom='0';
@@ -396,6 +407,8 @@ function editChat(message,bubble){
  const file=node('input');file.type='file';file.multiple=true;
  const retained=new Set((message.files||[]).map(f=>f.id));
  const existing=node('div','raj-dev-files');
+ const preview=node('div','raj-dev-pending-list');
+ const picker=attachmentPicker(form,file,preview,()=>retained.size);
  (message.files||[]).forEach(f=>{
   const row=node('span','raj-dev-file',f.name);
   row.append(button('×','raj-dev-link',()=>{retained.delete(f.id);row.remove();}));
@@ -403,14 +416,14 @@ function editChat(message,bubble){
  });
  const controls=node('div','raj-dev-toolbar');
  const save=button('저장','raj-dev-btn primary');save.type='submit';
- controls.append(save,button('취소','raj-dev-btn',()=>{state.chatEditing=false;refreshChat(true);}));
- form.append(field,file,existing,controls);bubble.append(form);
+ controls.append(save,button('취소','raj-dev-btn',()=>{picker.destroy();state.chatEditing=false;refreshChat(true);}));
+ form.append(field,file,existing,preview,controls);bubble.append(form);
  form.addEventListener('submit',async e=>{
   e.preventDefault();save.disabled=true;
   try{
-   const ids=await uploadSelected([...file.files]);
+   const ids=await uploadSelected(picker.files());
    await api('/chat/'+message.id,'PATCH',{body:field.value,file_ids:[...retained,...ids]});
-   state.chatEditing=false;state.chatSig='';await refreshChat(true);
+   picker.clear();state.chatEditing=false;state.chatSig='';await refreshChat(true);
   }catch(e){toast(e.message);}finally{save.disabled=false;}
  });
  field.focus();
@@ -418,13 +431,13 @@ function editChat(message,bubble){
 async function sendChat(e){
  e.preventDefault();
  const input=$('raj-dev-chat-input'),file=$('raj-dev-chat-files'),send=$('raj-dev-chat-send');
- if(!input.value.trim()&&!file.files.length)return;
+ if(!input.value.trim()&&!chatPicker?.pending.length)return;
  send.disabled=true;
  try{
   await ensureSession();
-  const ids=await uploadSelected([...file.files]);
+  const ids=await uploadSelected(chatPicker.files());
   await api('/chat','POST',{body:input.value,file_ids:ids});
-  input.value='';file.value='';state.chatSig='';await refreshChat(true);
+  input.value='';chatPicker.clear();state.chatSig='';await refreshChat(true);
  }catch(err){toast('전송 실패 · '+err.message);}finally{send.disabled=false;}
 }
 async function toggleChat(){

@@ -5,7 +5,7 @@ const BASE=String(window.RAJ_CONFIG?.pilotApiBase||'').replace(/\/$/,'')+'/api/p
 const SESSION_KEY='raj.dev.community.token.v1';
 const $=id=>document.getElementById(id);
 const node=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=String(text);return e;};
-const state={user:null,token:'',posts:[],messages:[],selected:null,board:false,chat:false,edit:null,chatTimer:0,chatSig:''};
+const state={user:null,token:'',posts:[],messages:[],selected:null,board:false,chat:false,edit:null,chatTimer:0,chatSig:'',chatEditing:false};
 let sessionPromise=null,drag=null;
 const date=s=>{try{return new Intl.DateTimeFormat(document.documentElement.lang||'ko',{dateStyle:'short',timeStyle:'short'}).format(new Date(s));}catch{return s;}};
 const errMap={DEV_RATE_LIMIT:'잠시 후 다시 작성해 주세요.',ATTACHMENT_TOO_LARGE_100MB:'파일당 최대 100MB까지 첨부할 수 있습니다.',ATTACHMENT_LIMIT:'한 번에 최대 12개까지 첨부할 수 있습니다.',DEV_SESSION_REQUIRED:'참여자 연결을 확인할 수 없습니다.'};
@@ -160,6 +160,11 @@ function setup(){
  window.visualViewport?.addEventListener('resize',sizeChat);
  window.visualViewport?.addEventListener('scroll',sizeChat);
  setupDragging();
+ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{
+  if(e.data?.type!=='RAJ_DEV_OPEN')return;
+  if(e.data.tab==='chat'){if(!state.chat)void toggleChat();}
+  else if(!state.board)void openBoard();
+ });
  if(new URLSearchParams(location.search).get('dev')==='board')void openBoard();
  if(new URLSearchParams(location.search).get('dev')==='chat')void toggleChat();
 }
@@ -269,7 +274,7 @@ function postEditor(post=null){
 }
 function chatSignature(msg){return msg.map(x=>[x.id,x.updated_at,x.body,(x.files||[]).map(f=>f.id).join(',')].join('|')).join('|');}
 async function refreshChat(force=false){
- if(!state.chat)return;
+ if(!state.chat||(state.chatEditing&&!force))return;
  const data=await api('/chat');
  const messages=data.messages||[];
  const sig=chatSignature(messages);
@@ -295,6 +300,7 @@ async function refreshChat(force=false){
  if(stick)log.scrollTop=log.scrollHeight;
 }
 function editChat(message,bubble){
+ state.chatEditing=true;
  bubble.replaceChildren(dateMeta(message));
  const form=node('form','raj-dev-compose');
  const field=node('textarea');field.value=message.body;field.maxLength=4000;
@@ -309,14 +315,14 @@ function editChat(message,bubble){
  });
  const controls=node('div','raj-dev-toolbar');
  const save=button('저장','raj-dev-btn primary');save.type='submit';
- controls.append(save,button('취소','raj-dev-btn',()=>refreshChat(true)));
+ controls.append(save,button('취소','raj-dev-btn',()=>{state.chatEditing=false;refreshChat(true);}));
  form.append(field,file,existing,controls);bubble.append(form);
  form.addEventListener('submit',async e=>{
   e.preventDefault();save.disabled=true;
   try{
    const ids=await uploadSelected([...file.files]);
    await api('/chat/'+message.id,'PATCH',{body:field.value,file_ids:[...retained,...ids]});
-   state.chatSig='';await refreshChat(true);
+   state.chatEditing=false;state.chatSig='';await refreshChat(true);
   }catch(e){toast(e.message);}finally{save.disabled=false;}
  });
  field.focus();

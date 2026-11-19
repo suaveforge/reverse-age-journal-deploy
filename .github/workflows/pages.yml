@@ -14,4 +14,9 @@ jobs:
           node-version: '22'
       - run: node --check config.js
       - run: node --check app.js
+      - run: node --check dev-community.js
+      - run: node --check raj-app-setup.js
+      - run: node --check raj-localizehub.js
+      - run: node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('manifest.webmanifest')); if(m.display!=='standalone'||!m.start_url)process.exit(1)"
+      - run: test -s dev-community.css && test -s raj-localizehub-catalog.json
       - run: test -s index.html && test -s styles.css

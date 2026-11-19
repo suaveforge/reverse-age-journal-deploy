@@ -16,5 +16,6 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "start_url": "/?source=pwa"
 }

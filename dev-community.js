@@ -379,4 +379,4 @@ function setupDragging(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});
 else setup();
-})();\n
+})();

@@ -117,7 +117,6 @@ function setup(){
   '<section class="raj-dev-board" role="dialog" aria-modal="true" aria-label="공동개발 건의 게시판">',
   '<header class="raj-dev-head"><div class="raj-dev-grow"><h2>함께 만드는 기쁜사이</h2><p>건의 · 오류 · 개선 제안 / 개인정보·상담기록은 올리지 마세요</p></div>',
   '<button id="raj-dev-name" class="raj-dev-btn" type="button">참여자</button>',
-  '<button id="raj-dev-review" class="raj-dev-btn" type="button">GPT 분석 링크</button>',
   '<button id="raj-dev-board-close" class="raj-dev-icon-button" aria-label="닫기" type="button">×</button></header>',
   '<div class="raj-dev-body"><section class="raj-dev-list">',
   '<div class="raj-dev-toolbar"><input id="raj-dev-search" placeholder="건의 검색" aria-label="건의 검색"><button id="raj-dev-new" class="raj-dev-btn primary" type="button">+ 새 글</button></div>',
@@ -145,11 +144,6 @@ function setup(){
  $('raj-dev-name').onclick=ownName;
  $('raj-dev-chat-name').onclick=ownName;
  $('raj-dev-search').oninput=renderPostList;
- $('raj-dev-review').onclick=async()=>{
-  const url=BASE+'/review-export';
-  try{await navigator.clipboard.writeText(url);toast('GPT 분석 링크 복사 완료 · ChatGPT에서 이 주소를 열어 검토할 수 있어요.');}
-  catch{window.prompt('ChatGPT 분석용 자료 주소를 복사하세요.',url);}
- };
  $('raj-dev-chat-form').addEventListener('submit',sendChat);
  $('raj-dev-chat-input').addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('raj-dev-chat-form').requestSubmit();}

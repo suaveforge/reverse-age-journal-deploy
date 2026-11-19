@@ -80,7 +80,7 @@
        });
      }
      const el=document.createElement('localize-switcher');
-     for(const [a,v] of Object.entries({project:P,api:H,locales:'ko,en,es',type:'dropdown',size:'sm',flags:'true','flag-style':'svg','label-mode':'native','query-param':'lang',navigate:'reload',locale:lang}))el.setAttribute(a,v);
+     for(const [a,v] of Object.entries({project:P,api:H,locales:'ko,en,es',type:'dropdown',size:'sm',flags:'false','flag-style':'svg','label-mode':'native','query-param':'lang',navigate:'reload',locale:lang}))el.setAttribute(a,v);
      el.style.setProperty('--lh-switcher-width','118px');
      m.replaceChildren(el);
      console.info('RAJ_LOCALIZEHUB_SELECTOR_OK=yes project=p49 locales=ko,en,es');

@@ -1,0 +1,74 @@
+/* Reverse Age Journal — isolated, collaborative development UI */
+#raj-dev-dock{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));z-index:2000;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-family:'Noto Sans KR',system-ui,sans-serif}
+#raj-dev-dock button{border:1px solid #c8d9c8;border-radius:24px;background:#fffefb;color:#164534;box-shadow:0 4px 15px #073b251c;padding:9px 14px;min-height:39px;font-size:12px;font-weight:800;white-space:nowrap;line-height:1.25}
+#raj-dev-dock button:hover,#raj-dev-dock button[aria-pressed=true]{background:#174b39;color:#fff}
+#raj-dev-dock #raj-app-setup{background:#e8f3d7;border-color:#c2dca9}
+#raj-dev-dock #raj-app-setup:hover{color:#164534;background:#d4eabb}
+#raj-dev-toast{position:fixed;left:50%;bottom:73px;transform:translateX(-50%);z-index:2147483600;background:#163f31;color:white;border-radius:13px;padding:12px 18px;font:600 13px system-ui,sans-serif;box-shadow:0 8px 35px #0004;max-width:min(90vw,530px);text-align:center}
+.raj-dev-overlay{position:fixed;inset:0;z-index:2147483100;display:grid;place-items:center;background:#09251dc7;padding:20px;font:14px 'Noto Sans KR',system-ui,sans-serif;color:#203d34}
+.raj-dev-overlay[hidden],.raj-dev-chat[hidden]{display:none!important}
+.raj-dev-board{background:#fcfdf9;border-radius:22px;box-shadow:0 22px 95px #0004;width:min(1080px,100%);height:min(86dvh,910px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #eff4eb}
+.raj-dev-head{display:flex;align-items:center;gap:13px;padding:17px 23px;border-bottom:1px solid #e1e9de;background:#f6faef}
+.raj-dev-head h2,.raj-dev-head h3{margin:0;font-size:20px;letter-spacing:-.04em;color:#194634}
+.raj-dev-head p{margin:4px 0 0;color:#71867a;font-size:11px}
+.raj-dev-grow{flex:1;min-width:0}
+.raj-dev-icon-button{border:0;background:transparent;font-size:22px;line-height:1;border-radius:8px;cursor:pointer;color:#476a54;padding:4px 7px}
+.raj-dev-body{display:grid;grid-template-columns:minmax(290px,35%) 1fr;min-height:0;flex:1}
+.raj-dev-list{border-right:1px solid #e4ebe0;overflow:auto;padding:16px;background:#fbfcfa}
+.raj-dev-detail{overflow:auto;padding:22px 26px}
+.raj-dev-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.raj-dev-toolbar input{flex:1;min-width:130px;max-width:100%;border:1px solid #d9e4d5;border-radius:12px;padding:10px 12px;background:#fff;color:#183a2c}
+.raj-dev-btn{border:1px solid #c9d9c9;background:white;color:#1e523c;border-radius:10px;padding:9px 13px;font-size:12px;font-weight:750;cursor:pointer}
+.raj-dev-btn:hover{background:#f1f7ee}
+.raj-dev-btn.primary{background:#194d38;color:#fff;border-color:#194d38}
+.raj-dev-btn.danger{color:#b33737}
+.raj-dev-item{display:block;width:100%;padding:15px 14px;text-align:left;border:1px solid transparent;border-bottom:1px solid #ecf0eb;border-radius:11px;background:transparent;cursor:pointer;color:#244734}
+.raj-dev-item:hover,.raj-dev-item.active{background:#edf4e8;border-color:#d2e5cc}
+.raj-dev-item strong{display:block;margin-bottom:6px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.raj-dev-meta{color:#728377;font-size:11px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.raj-dev-empty{padding:45px 12px;text-align:center;color:#829183}
+.raj-dev-detail h3{margin:2px 0 15px;font-size:23px;line-height:1.45;letter-spacing:-.05em;overflow-wrap:anywhere}
+.raj-dev-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;color:#34483c}
+.raj-dev-files{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+.raj-dev-media{max-width:min(100%,430px);max-height:280px;border-radius:10px;background:#eef5eb}
+.raj-dev-file{display:inline-flex;align-items:center;gap:7px;border:1px solid #dce7d8;border-radius:10px;padding:8px 12px;max-width:100%;word-break:break-word;background:#f5f8f3;color:#24533d;font-size:12px}
+.raj-dev-file a{color:#235c40;text-decoration:underline;overflow-wrap:anywhere}
+.raj-dev-comment{border-top:1px solid #ecf1e9;padding:13px 0}
+.raj-dev-comment p{margin:7px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.raj-dev-compose{display:grid;gap:11px}
+.raj-dev-compose input,.raj-dev-compose textarea{width:100%;padding:11px 13px;border:1px solid #d5e1d0;border-radius:11px;font:inherit;outline-color:#6ba275;background:#fff;resize:vertical}
+.raj-dev-compose textarea{min-height:138px}
+.raj-dev-compose input[type=file]{border:1px dashed #cbdac7;background:#f8faf6}
+.raj-dev-compose small{color:#718578}
+.raj-dev-comment-form{display:flex;gap:8px;margin-top:15px}
+.raj-dev-comment-form textarea{min-height:50px;flex:1;resize:vertical;border:1px solid #d5e1d0;border-radius:10px;padding:9px;font:inherit}
+.raj-dev-chat{position:fixed;z-index:2147483250;right:16px;bottom:72px;width:min(410px,calc(100vw - 20px));height:min(570px,calc(100dvh - 95px));min-width:min(320px,calc(100vw - 10px));min-height:260px;resize:both;overflow:hidden;display:flex;flex-direction:column;border-radius:18px;background:#f8fbf7;box-shadow:0 16px 70px #0005;border:1px solid #d9e7d7;font:13px 'Noto Sans KR',system-ui,sans-serif;color:#1c3f30}
+.raj-dev-chat-handle{display:flex;align-items:center;gap:12px;padding:13px 15px;background:#194934;color:#fff;cursor:grab;user-select:none;touch-action:none}
+.raj-dev-chat-handle strong{font-size:14px;flex:1}
+.raj-dev-chat-handle button{border:0;background:transparent;color:inherit;font-size:19px;cursor:pointer}
+.raj-dev-chat-log{overflow:auto;min-height:0;flex:1;padding:12px;display:flex;flex-direction:column;gap:11px}
+.raj-dev-msg{max-width:91%;align-self:flex-start;background:#fff;border:1px solid #e1eade;border-radius:13px;padding:10px 11px;overflow-wrap:anywhere;box-shadow:0 1px 4px #0001}
+.raj-dev-msg.mine{align-self:flex-end;background:#e6f4e0;border-color:#cde5c5}
+.raj-dev-msg p{white-space:pre-wrap;margin:6px 0;line-height:1.6}
+.raj-dev-msg .raj-dev-files{margin:5px 0}
+.raj-dev-chat-form{border-top:1px solid #e0e9dd;background:white;padding:10px;display:flex;gap:7px;flex-direction:column}
+.raj-dev-chat-compose{display:flex;gap:6px}
+.raj-dev-chat-compose textarea{min-width:0;min-height:39px;max-height:90px;flex:1;border:1px solid #d3e2d0;border-radius:10px;padding:9px;resize:vertical;font:inherit}
+.raj-dev-chat-form input[type=file]{font-size:11px;max-width:100%;color:#536b5a}
+.raj-dev-chat-form .raj-dev-btn{padding:7px 10px}
+.raj-dev-name{font-size:11px;color:#88ad97;text-decoration:underline;cursor:pointer}
+.raj-dev-link{background:none;border:0;text-decoration:underline;color:#3d7451;cursor:pointer;font-size:11px;padding:3px}
+@media(max-width:740px){
+ #raj-dev-dock{left:8px;right:8px;bottom:max(7px,env(safe-area-inset-bottom));gap:6px;justify-content:center;flex-wrap:nowrap}
+ #raj-dev-dock button{flex:1;min-width:0;max-width:150px;padding:9px 5px;font-size:11px;box-shadow:0 3px 9px #0002}
+ .raj-dev-overlay{padding:0}
+ .raj-dev-board{width:100%;height:100dvh;max-height:none;border-radius:0}
+ .raj-dev-head{padding:10px 14px}
+ .raj-dev-head h2{font-size:17px}
+ .raj-dev-body{display:flex;flex-direction:column}
+ .raj-dev-list{flex:0 0 auto;max-height:31%;border-right:0;border-bottom:1px solid #e1e9de;padding:10px}
+ .raj-dev-detail{flex:1;min-height:0;padding:15px}
+ .raj-dev-chat{inset:0!important;right:0!important;bottom:0!important;top:0!important;left:0!important;width:100vw!important;height:var(--raj-visual-height,100dvh)!important;min-width:0;min-height:0;max-width:none;max-height:none;resize:none;border-radius:0}
+ .raj-dev-chat-handle{cursor:default}
+ .raj-dev-chat-log{padding-bottom:22px}
+}

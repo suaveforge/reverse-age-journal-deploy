@@ -991,6 +991,61 @@
       "ko": "기쁜사이 알림 시험",
       "en": "Joyful Connection notification test",
       "es": "Prueba de avisos de Vínculo Feliz"
+    },
+    {
+      "ko": "본문 복사",
+      "en": "Copy post",
+      "es": "Copiar publicación"
+    },
+    {
+      "ko": "복사",
+      "en": "Copy",
+      "es": "Copiar"
+    },
+    {
+      "ko": "클립보드에 복사했습니다.",
+      "en": "Copied to clipboard.",
+      "es": "Copiado al portapapeles."
+    },
+    {
+      "ko": "텍스트를 복사하세요.",
+      "en": "Copy this text.",
+      "es": "Copie este texto."
+    },
+    {
+      "ko": "클립보드 이미지",
+      "en": "Clipboard image",
+      "es": "Imagen del portapapeles"
+    },
+    {
+      "ko": "첨부 미리보기",
+      "en": "Attachment preview",
+      "es": "Vista previa del archivo"
+    },
+    {
+      "ko": "첨부는 글/메시지당 최대 12개입니다.",
+      "en": "Up to 12 files per post or message.",
+      "es": "Hasta 12 archivos por publicación o mensaje."
+    },
+    {
+      "ko": "파일당 최대 100MB까지 첨부할 수 있습니다.",
+      "en": "Files up to 100 MB each.",
+      "es": "Archivos de hasta 100 MB cada uno."
+    },
+    {
+      "ko": "첨부 중",
+      "en": "Uploading",
+      "es": "Subiendo archivo"
+    },
+    {
+      "ko": "최대 12개까지 첨부할 수 있습니다.",
+      "en": "Up to 12 attachments.",
+      "es": "Hasta 12 archivos adjuntos."
+    },
+    {
+      "ko": "게시판 연결 실패",
+      "en": "Unable to connect to suggestions.",
+      "es": "No se pudo conectar a sugerencias."
     }
   ]
 }

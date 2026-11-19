@@ -1,0 +1,48 @@
+name: p49 LocalizeHub trilingual smoke
+on:
+  push:
+    paths:
+      - 'index.html'
+      - 'receive.html'
+      - 'raj-localizehub.js'
+      - 'raj-localizehub-catalog.json'
+      - '.github/workflows/p49-localizehub-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate p49 adapter and three translation catalogs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check raj-localizehub.js
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const catalog = JSON.parse(fs.readFileSync('raj-localizehub-catalog.json','utf8'));
+          assert.equal(catalog.project, 'p49');
+          assert.equal(catalog.defaultLocale, 'ko');
+          assert.deepEqual(catalog.supportedLocales, ['ko','en','es']);
+          assert.ok(catalog.entries.length >= 140);
+          const ko = new Set();
+          for (const item of catalog.entries) {
+            for(const lang of catalog.supportedLocales) assert.ok(typeof item[lang] === 'string' && item[lang].trim(), lang);
+            assert.ok(!ko.has(item.ko), 'duplicate source: '+item.ko);
+            ko.add(item.ko);
+          }
+          for(const page of ['index.html','receive.html']){
+            assert.match(fs.readFileSync(page,'utf8'), /raj-localizehub\.js/);
+          }
+          const js = fs.readFileSync('raj-localizehub.js','utf8');
+          assert.match(js,/p49/);
+          assert.match(js,/api\/v1\/public\/projects/);
+          console.log('RAJ_P49_LOCALIZEHUB_SMOKE=PASS entries='+catalog.entries.length);
+          NODE

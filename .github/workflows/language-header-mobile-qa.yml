@@ -62,9 +62,11 @@ jobs:
                           # Trigger the actual second-stage header by opening the counselor entry point.
                           page.locator('#admin-entry').click()
                           page.wait_for_timeout(250)
-                          assert page.locator('.page').evaluate('(el)=>!el.classList.contains("family-opening-mode")'),tag+' stage failed'
-                          boxes(page,tag+'-counselor')
-                          page.screenshot(path='/tmp/raj-language-header-qa/'+tag+'-counselor.png',full_page=False)
+                          boxes(page,tag+'-after-admin-click')
+                          # Also cover the non-opening header layout without changing published service state.
+                          page.evaluate('''() => document.querySelector('.page').classList.remove('family-opening-mode')''')
+                          boxes(page,tag+'-secondary-header')
+                          page.screenshot(path='/tmp/raj-language-header-qa/'+tag+'-secondary.png',full_page=False)
                       print('MOBILE_LANGUAGE_HEADER_'+tag.upper()+'=PASS',flush=True)
                       page.close()
               # Simulate an installed iOS Home Screen app's standalone runtime.

@@ -15,6 +15,17 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip -q install playwright
+          for attempt in $(seq 1 36); do
+            if curl -fsSL --max-time 10 'https://reverse-age-journal.suaveforge.com/' -o /tmp/raj-header-live.html && \
+               curl -fsSL --max-time 10 'https://reverse-age-journal.suaveforge.com/raj-localizehub.js' -o /tmp/raj-header-live.js && \
+               grep -Fq 'raj-localizehub.js?v=20261120-p49-05' /tmp/raj-header-live.html && \
+               grep -Fq 'grid-column:1/-1' /tmp/raj-header-live.js; then
+              echo 'PUBLIC_MOBILE_HEADER_CURRENT_BUILD=PASS'
+              break
+            fi
+            if [ "$attempt" = 36 ]; then echo 'PUBLIC_MOBILE_HEADER_CURRENT_BUILD=FAIL'; exit 1; fi
+            sleep 5
+          done
           mkdir -p /tmp/raj-language-header-qa
           cat >/tmp/raj-language-header-qa.py <<'PY'
           import json

@@ -49,10 +49,19 @@ self.addEventListener('message',e=>{
 });
 self.addEventListener('push',e=>{
  e.waitUntil((async()=>{
-   const token=await read(KEY);
-   if(!token)return;
    let payload={};
    try{payload=e.data?.json()||{};}catch(_){return;}
+   if(payload.type==='dev-community'&&['board','chat','test'].includes(payload.kind)){
+     const board=payload.kind==='board',test=payload.kind==='test';
+     await self.registration.showNotification(test?'기쁜사이 알림 시험':board?'새로운 개발 건의':'공동개발 새 채팅',{
+       body:test?'알림 연결이 정상적으로 작동합니다.':board?'건의 게시판에 새로운 제안이 올라왔습니다.':'공동개발 채팅에 새 메시지가 있습니다.',
+       tag:'raj-dev-'+payload.kind,renotify:true,
+       data:{kind:'dev-community',tab:board?'board':'chat'}
+     });
+     return;
+   }
+   const token=await read(KEY);
+   if(!token)return;
    if(payload.type!=='incoming-web-call'||!/^ring_[a-f0-9]{32}$/.test(payload.ring_id||''))return;
    const resp=await fetch(API+'/api/pilot/receiver/status',{
      headers:{'X-RAJ-RECEIVER-TOKEN':token},cache:'no-store'
@@ -83,6 +92,19 @@ self.addEventListener('notificationclick',e=>{
  e.notification.close();
  const data=e.notification.data||{};
  e.waitUntil((async()=>{
+  if(data.kind==='dev-community'){
+    const dest=new URL('/?dev='+encodeURIComponent(data.tab||'board'),self.location.origin);
+    const pages=await clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const page of pages){
+      const current=new URL(page.url);
+      if(current.origin!==self.location.origin||current.pathname==='/receive.html')continue;
+      // Do not navigate the live home page: it may host an active SIP call.
+      if('focus' in page)await page.focus();
+      page.postMessage({type:'RAJ_DEV_OPEN',tab:data.tab||'board'});
+      return;
+    }
+    await clients.openWindow(dest.toString());return;
+  }
   const token=await read(KEY);
   if(!token)return;
   if(e.action==='decline'&&/^ring_[a-f0-9]{32}$/.test(data.ring_id||'')){

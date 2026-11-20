@@ -69,7 +69,9 @@
  .raj-dev-list{flex:0 0 auto;max-height:31%;border-right:0;border-bottom:1px solid #e1e9de;padding:10px}
  .raj-dev-detail{flex:1;min-height:0;padding:15px}
  .raj-dev-chat{inset:0!important;right:0!important;bottom:0!important;top:0!important;left:0!important;width:100vw!important;height:var(--raj-visual-height,100dvh)!important;min-width:0;min-height:0;max-width:none;max-height:none;resize:none;border-radius:0}
- .raj-dev-chat-handle{cursor:default}
+ .raj-dev-chat-handle{cursor:default;padding-top:calc(13px + env(safe-area-inset-top));padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}
+ .raj-dev-chat-form{padding-bottom:calc(10px + env(safe-area-inset-bottom));padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+ .raj-dev-head{padding-top:calc(10px + env(safe-area-inset-top));padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
  .raj-dev-chat-log{padding-bottom:22px}
 }
 

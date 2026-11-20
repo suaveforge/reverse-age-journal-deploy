@@ -88,11 +88,25 @@
  }
  async function switcher(){
    const m=document.createElement('div');m.dataset.localizehubSwitcher='p49';
-   m.style.cssText='position:absolute;top:12px;right:155px;z-index:2147483000;min-width:120px;max-width:140px';
+   // Real header flex/grid placement: no absolute right offset, even inside iOS PWA.
+   m.style.cssText='position:relative;z-index:2147483000;flex:none;width:118px;min-width:118px;max-width:118px;margin-left:auto';
    const style=document.createElement('style');
-   style.textContent='@media(max-width:700px){[data-localizehub-switcher]{top:7px!important;right:145px!important;min-width:104px!important;max-width:116px!important}}';
+   style.id='raj-localizehub-responsive-header';
+   style.textContent=[
+     '.site-header [data-localizehub-switcher]{align-self:center}',
+     '@media(max-width:700px){',
+     '.page.family-opening-mode .site-header{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px!important;padding-top:calc(8px + env(safe-area-inset-top))!important;padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important}',
+     '.page.family-opening-mode .site-header [data-localizehub-switcher]{grid-column:1;grid-row:1;justify-self:start;margin-left:0!important}',
+     '.page.family-opening-mode .site-header .admin-entry{grid-column:2;grid-row:1;justify-self:end;max-width:calc(100vw - 160px);white-space:normal!important;text-align:center;overflow-wrap:break-word}',
+     '.page:not(.family-opening-mode) .site-header{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:auto auto;align-items:center!important;column-gap:8px!important;row-gap:5px!important;padding-top:calc(18px + env(safe-area-inset-top))!important;padding-left:max(16px,env(safe-area-inset-left))!important;padding-right:max(16px,env(safe-area-inset-right))!important}',
+     '.page:not(.family-opening-mode) .site-header .wordmark{grid-column:1;grid-row:1;min-width:0}',
+     '.page:not(.family-opening-mode) .site-header .admin-entry{grid-column:2;grid-row:1;justify-self:end}',
+     '.page:not(.family-opening-mode) .site-header [data-localizehub-switcher]{grid-column:2;grid-row:2;justify-self:end;margin-left:0!important}',
+     '}'
+   ].join('');
    document.head.append(style);
-   (document.querySelector('.site-header')||document.body).append(m);
+   const header=document.querySelector('.site-header')||document.body;
+   header.insertBefore(m,header.querySelector('.admin-entry')||null);
    fallback(m);
    try{
      const response=await fetch(H+'/api/v1/public/projects/'+P+'/locales',{cache:'no-store'});

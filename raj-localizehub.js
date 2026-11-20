@@ -8,6 +8,32 @@
  const lang=L.includes(q)?q:(L.includes(saved)?saved:'ko');
  try{localStorage.setItem('localizehub:'+P+':locale',lang);}catch{}
  document.documentElement.lang=lang;
+ // p49-only visual emblem: Argentina, Brazil, Chile and Colombia in a 2x2 rectangular flag.
+ // This does not change locale semantics: Espanol remains "es" (Brazil speaks Portuguese).
+ const LATAM_RECT_FLAG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 60" aria-hidden="true">'
+  + '<rect width="44" height="30" fill="#74acdf"/><rect y="10" width="44" height="10" fill="#fff"/><circle cx="22" cy="15" r="3" fill="#f6b40e"/>'
+  + '<rect x="44" width="44" height="30" fill="#009b3a"/><polygon points="66,3 85,15 66,27 47,15" fill="#ffdf00"/><circle cx="66" cy="15" r="7.5" fill="#002776"/><path d="M59 13.5Q66 11 73 16" fill="none" stroke="#fff" stroke-width="1.6"/>'
+  + '<rect y="30" width="44" height="15" fill="#fff"/><rect y="45" width="44" height="15" fill="#d52b1e"/><rect y="30" width="17" height="15" fill="#0039a6"/><polygon points="8.5,32.8 9.8,36.8 14,36.8 10.6,39.2 11.9,43.1 8.5,40.7 5.1,43.1 6.4,39.2 3,36.8 7.2,36.8" fill="#fff"/>'
+  + '<rect x="44" y="30" width="44" height="15" fill="#fcd116"/><rect x="44" y="45" width="44" height="7.5" fill="#003893"/><rect x="44" y="52.5" width="44" height="7.5" fill="#ce1126"/>'
+  + '<path d="M44 0V60M0 30H88" stroke="#fff" stroke-width="1"/></svg>';
+ function decorateLatamSwitcher(el){
+   const root=el.shadowRoot;
+   if(!root)return;
+   const put=flag=>{
+     if(!flag||flag.dataset.latamComposite==='yes')return;
+     flag.dataset.latamComposite='yes';
+     flag.innerHTML=LATAM_RECT_FLAG;
+   };
+   const apply=()=>{
+     const option=root.querySelector('.option[data-locale="es"] .flag');
+     const active=lang==='es'?root.querySelector('.control .flag'):null;
+     put(option);put(active);
+     if(option&&(lang!=='es'||active))observer.disconnect();
+   };
+   const observer=new MutationObserver(apply);
+   observer.observe(root,{childList:true,subtree:true});
+   apply();
+ }
  const norm=s=>String(s??'').replace(/\s+/g,' ').trim();
  let words=new Map(),longWords=[],processing=false;
  function translate(value){
@@ -52,7 +78,7 @@
    m.replaceChildren();
    const select=document.createElement('select');
    select.setAttribute('aria-label','Language / 언어 / Idioma');
-   for(const [code,label] of [['ko','🇰🇷 한국어'],['en','🇺🇸 English'],['es','🇪🇸 Español']]){
+   for(const [code,label] of [['ko','🇰🇷 한국어'],['en','🇺🇸 English'],['es','🌎 Español']]){
      const option=document.createElement('option');option.value=code;option.textContent=label;select.append(option);
    }
    select.value=lang;
@@ -83,6 +109,7 @@
      for(const [a,v] of Object.entries({project:P,api:H,locales:'ko,en,es',type:'dropdown',size:'sm',flags:'true','flag-style':'svg','label-mode':'native','query-param':'lang',navigate:'reload',locale:lang}))el.setAttribute(a,v);
      el.style.setProperty('--lh-switcher-width','118px');
      m.replaceChildren(el);
+     decorateLatamSwitcher(el);
      console.info('RAJ_LOCALIZEHUB_SELECTOR_OK=yes project=p49 locales=ko,en,es');
    }catch(e){console.warn('RAJ_LOCALIZEHUB_SELECTOR_FALLBACK',String(e));}
  }

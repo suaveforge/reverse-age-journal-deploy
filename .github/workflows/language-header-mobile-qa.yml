@@ -1,0 +1,91 @@
+name: Verify language selector header overlap on mobile and PWA
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/language-header-mobile-qa.yml]
+permissions:
+  contents: read
+jobs:
+  chrome-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check real public site language selector and admin layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright
+          mkdir -p /tmp/raj-language-header-qa
+          cat >/tmp/raj-language-header-qa.py <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          BASE='https://reverse-age-journal.suaveforge.com/'
+          sizes=[('iphone-small',320,700),('iphone-se',375,812),('iphone',390,844),('screenshot',449,850),('tablet',768,960),('desktop',1365,900)]
+          def boxes(page,description):
+              dims=page.evaluate('''() => {
+                const rect=el=>{if(!el)return null;const s=getComputedStyle(el),r=el.getBoundingClientRect();if(s.display==='none'||!r.width||!r.height)return null;return {x:+r.left.toFixed(1),y:+r.top.toFixed(1),right:+r.right.toFixed(1),bottom:+r.bottom.toFixed(1),w:+r.width.toFixed(1),h:+r.height.toFixed(1),scrollW:el.scrollWidth,clientW:el.clientWidth}};
+                return {innerWidth,documentWidth:document.documentElement.scrollWidth,
+                  header:rect(document.querySelector('.site-header')),lang:rect(document.querySelector('[data-localizehub-switcher]')),admin:rect(document.querySelector('.admin-entry')),logo:rect(document.querySelector('.wordmark'))};
+              }''')
+              print('HEADER_GEOMETRY '+description+' '+json.dumps(dims,ensure_ascii=False),flush=True)
+              assert dims['lang'] and dims['admin'],description+' expected both controls'
+              assert dims['lang']['x']>=-1 and dims['lang']['right']<=dims['innerWidth']+1,(description,'lang offscreen',dims)
+              assert dims['admin']['x']>=-1 and dims['admin']['right']<=dims['innerWidth']+1,(description,'admin offscreen',dims)
+              a,b=dims['lang'],dims['admin']
+              overlap=min(a['right'],b['right'])-max(a['x'],b['x'])>0.5 and min(a['bottom'],b['bottom'])-max(a['y'],b['y'])>0.5
+              assert not overlap,(description,'lang and admin overlap',dims)
+              assert dims['admin']['scrollW']<=dims['admin']['clientW']+2,(description,'admin text clipped',dims)
+              assert dims['documentWidth']<=dims['innerWidth']+2,(description,'horizontal document overflow',dims)
+              if dims['logo']:
+                c=dims['logo']
+                overlap=min(a['right'],c['right'])-max(a['x'],c['x'])>0.5 and min(a['bottom'],c['bottom'])-max(a['y'],c['y'])>0.5
+                assert not overlap,(description,'language and brand overlap',dims)
+              return dims
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+              for label,width,height in sizes:
+                  for lang in ['en','es']:
+                      page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
+                      response=page.goto(BASE+'?lang='+lang,wait_until='domcontentloaded',timeout=45000)
+                      assert response.status==200,(label,lang,response.status)
+                      page.locator('localize-switcher .control').wait_for(timeout=25000)
+                      tag=label+'-'+lang
+                      boxes(page,tag+'-opening')
+                      page.locator('localize-switcher .control').click()
+                      menu=page.locator('localize-switcher .menu')
+                      assert menu.is_visible(),tag+' menu not visible'
+                      menu_box=menu.bounding_box()
+                      assert menu_box['x']>=-1 and menu_box['x']+menu_box['width']<=width+1,(tag,'dropdown clipped',menu_box)
+                      page.screenshot(path='/tmp/raj-language-header-qa/'+tag+'-opening.png',full_page=False)
+                      page.locator('localize-switcher .control').click()
+                      if width<=449:
+                          # Trigger the actual second-stage header by opening the counselor entry point.
+                          page.locator('#admin-entry').click()
+                          page.wait_for_timeout(250)
+                          assert page.locator('.page').evaluate('(el)=>!el.classList.contains("family-opening-mode")'),tag+' stage failed'
+                          boxes(page,tag+'-counselor')
+                          page.screenshot(path='/tmp/raj-language-header-qa/'+tag+'-counselor.png',full_page=False)
+                      print('MOBILE_LANGUAGE_HEADER_'+tag.upper()+'=PASS',flush=True)
+                      page.close()
+              # Simulate an installed iOS Home Screen app's standalone runtime.
+              ctx=browser.new_context(viewport={'width':390,'height':844},user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1')
+              ctx.add_init_script('Object.defineProperty(navigator,"standalone",{get:()=>true});')
+              for lang in ['en','es']:
+                  page=ctx.new_page()
+                  page.goto(BASE+'?lang='+lang,wait_until='domcontentloaded',timeout=45000)
+                  page.locator('localize-switcher .control').wait_for(timeout=25000)
+                  boxes(page,'simulated-iphone-pwa-'+lang)
+                  page.screenshot(path='/tmp/raj-language-header-qa/standalone-'+lang+'.png',full_page=False)
+                  print('IOS_PWA_HEADER_SIMULATED_'+lang.upper()+'=PASS',flush=True)
+                  page.close()
+              ctx.close()
+              browser.close()
+          print('REAL_PUBLIC_MOBILE_LANGUAGE_HEADER=PASS',flush=True)
+          PY
+          python3 /tmp/raj-language-header-qa.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raj-language-header-mobile-screenshots
+          path: /tmp/raj-language-header-qa/*.png
+          if-no-files-found: warn

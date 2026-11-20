@@ -38,6 +38,7 @@ jobs:
               assert dims['documentWidth']<=dims['innerWidth']+2,(description,'horizontal document overflow',dims)
               if dims['logo']:
                 c=dims['logo']
+                assert c['scrollW']<=c['clientW']+2,(description,'translated brand clipped',dims)
                 overlap=min(a['right'],c['right'])-max(a['x'],c['x'])>0.5 and min(a['bottom'],c['bottom'])-max(a['y'],c['y'])>0.5
                 assert not overlap,(description,'language and brand overlap',dims)
               return dims
@@ -67,6 +68,23 @@ jobs:
                           page.evaluate('''() => document.querySelector('.page').classList.remove('family-opening-mode')''')
                           boxes(page,tag+'-secondary-header')
                           page.screenshot(path='/tmp/raj-language-header-qa/'+tag+'-secondary.png',full_page=False)
+                      if width<=449:
+                          dock=page.locator('#raj-dev-dock')
+                          dock.wait_for(state='visible',timeout=12000)
+                          buttons=dock.locator('button')
+                          assert buttons.count()==3,tag+' missing PWA/board/chat buttons'
+                          rects=[buttons.nth(i).bounding_box() for i in range(3)]
+                          for box in rects:
+                              assert box['x']>=-1 and box['x']+box['width']<=width+1,(tag,'dock button outside viewport',rects)
+                          for left,right in zip(rects,rects[1:]):
+                              assert left['x']+left['width']<=right['x']+.5,(tag,'dock buttons overlap',rects)
+                          page.locator('#raj-dev-chat-toggle').click()
+                          chat=page.locator('#raj-dev-chat')
+                          assert chat.is_visible(),tag+' chat did not open'
+                          chatbox=chat.bounding_box()
+                          assert chatbox['x']>=-1 and chatbox['x']+chatbox['width']<=width+1,(tag,'chat overflows',chatbox)
+                          page.screenshot(path='/tmp/raj-language-header-qa/'+tag+'-chat.png',full_page=False)
+                          page.locator('#raj-dev-chat-close').click()
                       print('MOBILE_LANGUAGE_HEADER_'+tag.upper()+'=PASS',flush=True)
                       page.close()
               # Simulate an installed iOS Home Screen app's standalone runtime.

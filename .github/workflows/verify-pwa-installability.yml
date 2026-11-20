@@ -19,9 +19,9 @@ jobs:
           from playwright.sync_api import sync_playwright
           root='https://reverse-age-journal.suaveforge.com/'
           with sync_playwright() as p:
-              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
-              page=browser.new_page()
-              cdp=page.context.new_cdp_session(page)
+              context=p.chromium.launch_persistent_context('/tmp/raj-chrome-profile',channel='chrome',headless=True,args=['--no-sandbox'])
+              page=context.pages[0] if context.pages else context.new_page()
+              cdp=context.new_cdp_session(page)
               page.goto(root,wait_until='networkidle',timeout=45000)
               result=cdp.send('Page.getInstallabilityErrors')
               print('CHROME_INSTALLABILITY='+str(result),flush=True)
@@ -29,6 +29,6 @@ jobs:
                   print('INSTALLABILITY_ERROR='+str(err.get('errorId')),flush=True)
               assert not result.get('installabilityErrors'),'PWA not installable on Chrome'
               print('CHROME_PWA_INSTALLABILITY=PASS',flush=True)
-              browser.close()
+              context.close()
           PY
           python3 /tmp/raj_installability.py

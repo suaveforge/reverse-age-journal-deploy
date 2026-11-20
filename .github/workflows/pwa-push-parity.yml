@@ -1,0 +1,86 @@
+name: PWA chat push parity and live install audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - qa/pwa-push-parity.cjs
+      - service-worker.js
+      - raj-app-setup.js
+      - index.html
+      - .github/workflows/pwa-push-parity.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static and synthetic Web Push event tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check service-worker.js
+          node --check raj-app-setup.js
+          node qa/pwa-push-parity.cjs
+      - name: Check latest files actually served on public domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=https://reverse-age-journal.suaveforge.com
+          for i in $(seq 1 24); do
+            if curl -fsSL --max-time 10 "$url/service-worker.js" -o /tmp/raj-live-sw.js && \
+               curl -fsSL --max-time 10 "$url/raj-app-setup.js" -o /tmp/raj-live-setup.js && \
+               curl -fsSL --max-time 10 "$url/" -o /tmp/raj-live-index.html && \
+               grep -Fq "payload.type==='dev-community'" /tmp/raj-live-sw.js && \
+               grep -Fq 'pendingSubscription=readyPush.reg.pushManager.subscribe' /tmp/raj-live-setup.js && \
+               grep -Fq 'raj-app-setup.js?v=20261120-02' /tmp/raj-live-index.html; then
+              echo 'PUBLIC_SITE_PWA_PUSH_ASSETS=PASS'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'PUBLIC_SITE_PWA_PUSH_ASSETS=FAIL'
+          exit 1
+      - name: Check real Chrome UI, SW installation and live push config (no sends)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright
+          cat >/tmp/raj_pwa_live_qa.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          URL='https://reverse-age-journal.suaveforge.com/'
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+              for label,width,height in [('desktop',1365,900),('mobile',390,844)]:
+                  page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
+                  errors=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  res=page.goto(URL,wait_until='domcontentloaded',timeout=45000)
+                  assert res.status==200,(label,res.status)
+                  btn=page.locator('#raj-app-setup')
+                  btn.wait_for(state='visible',timeout=25000)
+                  assert '앱' in btn.inner_text(),(label,btn.inner_text())
+                  result=page.evaluate('''async () => {
+                    const out={sw:false,config:false,keyLength:0};
+                    try {
+                      const reg=await Promise.race([
+                        navigator.serviceWorker.ready,
+                        new Promise((_,reject)=>setTimeout(()=>reject(Error('sw timeout')),15000))
+                      ]);
+                      out.sw=!!reg.active;
+                      const base=window.RAJ_CONFIG?.pilotApiBase;
+                      const res=await fetch(base+'/api/pilot/dev/push/config',{cache:'no-store'});
+                      out.config=res.status===200;
+                      if(res.ok)out.keyLength=String((await res.json()).publicKey||'').length;
+                    }catch(e){out.error=String(e)}
+                    return out;
+                  }''')
+                  print('RAJ_PWA_LIVE_'+label.upper()+'='+str(result),flush=True)
+                  assert result['sw'] and result['config'] and result['keyLength']>60,(label,result)
+                  assert not errors,(label,errors)
+                  page.close()
+              browser.close()
+          print('PWA_LIVE_BROWSER_QA=PASS (device lockscreen untested)',flush=True)
+          PY
+          python3 /tmp/raj_pwa_live_qa.py

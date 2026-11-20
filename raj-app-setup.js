@@ -4,7 +4,7 @@
 (() => {
 'use strict';
 const API=String(window.RAJ_CONFIG?.pilotApiBase||'').replace(/\/$/,'')+'/api/pilot/dev';
-let pendingInstall=null,installed=false,prepared=null,subscribed=false,busy=false;
+let pendingInstall=null,installed=false,prepared=null,readyPush=null,subscribed=false,busy=false;
 const ios=()=>/iPhone|iPad|iPod/.test(navigator.userAgent);
 const standalone=()=>window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone===true;
 const supported=()=>window.isSecureContext&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -60,26 +60,32 @@ async function onClick(){
  if(Notification.permission==='denied'){toast('기기 설정 → 알림에서 기쁜사이 알림을 허용하세요.');return;}
  if(subscribed&&Notification.permission==='granted'){
   try{const member=await window.RAJ_DEV_SESSION?.();
-   if(member){const token=localStorage.getItem('raj.dev.community.token.v1');await fetch(API+'/push/test',{method:'POST',headers:{'X-RAJ-DEV-TOKEN':token||''}});}
-   toast('시험 알림을 전송하도록 요청했습니다.');
+   if(!member)throw Error('참여자 세션 없음');
+   const token=localStorage.getItem('raj.dev.community.token.v1');
+   const response=await fetch(API+'/push/test',{method:'POST',headers:{'X-RAJ-DEV-TOKEN':token||''}});
+   if(!response.ok)throw Error('HTTP '+response.status);
+   toast('시험 알림을 서버에 요청했습니다. 실제 수신은 기기에서 확인하세요.');
   }catch(e){toast('시험 알림 요청 실패 · '+e.message);}
   return;
  }
- // Permission must be requested directly within the user's click (iOS).
- let permission;
- try{permission=Notification.permission==='default'?Notification.requestPermission():Promise.resolve(Notification.permission);}
- catch(e){toast('알림 허용 창을 열지 못했습니다.');return;}
+ // iPhone Home Screen PWAs require PushManager.subscribe() directly inside
+ // the user's click activation, before the first await (same as OptionTrade).
+ if(!readyPush){
+  if(!prepared)prepared=prepare();
+  Promise.resolve(prepared).then(value=>{readyPush=value;}).catch(()=>{});
+  toast('알림 연결을 준비하고 있습니다. 준비 후 버튼을 다시 눌러주세요.');
+  return;
+ }
+ let pendingSubscription;
+ try{
+  pendingSubscription=readyPush.reg.pushManager.subscribe({
+   userVisibleOnly:true,applicationServerKey:readyPush.key
+  });
+ }catch(e){toast('알림 권한 요청 실패 · '+(e.message||e));return;}
  busy=true;render();
  try{
-  if(await permission!=='granted'){toast('알림 권한이 허용되지 않았습니다.');return;}
-  let ready=prepared?await prepared:null;
-  if(!ready){ready=await prepare();}
-  if(!ready)throw Error('서버 또는 푸시 설정 연결 실패');
-  let subscription=await ready.reg.pushManager.getSubscription();
-  if(!subscription){
-   // VAPID key is prefetched before tap. Existing subscription is reused.
-   subscription=await ready.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ready.key});
-  }
+  const subscription=await pendingSubscription;
+  if(Notification.permission!=='granted')throw Error('알림 허용이 필요합니다');
   await window.RAJ_DEV_SESSION?.();
   const token=localStorage.getItem('raj.dev.community.token.v1')||'';
   const response=await fetch(API+'/push/subscribe',{method:'POST',
@@ -98,7 +104,10 @@ async function onClick(){
 function start(){
  const b=$('raj-app-setup');if(!b)return;
  b.removeEventListener('click',onClick);b.addEventListener('click',onClick);
- if(supported())prepared=prepare();
+ if(supported()){
+  prepared=prepare();
+  Promise.resolve(prepared).then(value=>{readyPush=value;}).catch(()=>{});
+ }
  render();
  if(standalone()&&Notification.permission==='granted'&&supported()){
   Promise.resolve(prepared).then(async obj=>{

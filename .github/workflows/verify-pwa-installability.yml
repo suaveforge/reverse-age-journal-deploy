@@ -1,0 +1,34 @@
+name: Check real Chrome PWA installability
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/verify-pwa-installability.yml]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect production manifest and installability diagnostics in real Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright
+          cat >/tmp/raj_installability.py <<'PY'
+          from playwright.sync_api import sync_playwright
+          root='https://reverse-age-journal.suaveforge.com/'
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox'])
+              page=browser.new_page()
+              cdp=page.context.new_cdp_session(page)
+              page.goto(root,wait_until='networkidle',timeout=45000)
+              result=cdp.send('Page.getInstallabilityErrors')
+              print('CHROME_INSTALLABILITY='+str(result),flush=True)
+              for err in result.get('installabilityErrors',[]):
+                  print('INSTALLABILITY_ERROR='+str(err.get('errorId')),flush=True)
+              assert not result.get('installabilityErrors'),'PWA not installable on Chrome'
+              print('CHROME_PWA_INSTALLABILITY=PASS',flush=True)
+              browser.close()
+          PY
+          python3 /tmp/raj_installability.py

@@ -1,0 +1,83 @@
+name: Validate member diary mobile page and safe SMS preview
+on:
+  push:
+    branches: [feature/member-diary-view-20261121]
+    paths: [.github/workflows/member-diary-mobile-qa.yml, d/index.html, d/diary-view.css, d/diary-view.js, d/cover.png]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render real browser diary page with local mock API only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip -q install playwright
+          python3 -m playwright install --with-deps chromium >/dev/null 2>&1
+          python3 -m http.server 18765 --bind 127.0.0.1 > /tmp/gippeunsai-diaries-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          mkdir -p /tmp/diary-screens
+          cat >/tmp/diary-visual-qa.py <<'PY'
+          import os
+          from playwright.sync_api import sync_playwright
+          root='http://127.0.0.1:18765'
+          token='AbCdEfGhIjKlMnOp'
+          inject="""() => {
+            const realFetch=window.fetch.bind(window);
+            window.fetch=(url,options)=> {
+              if(String(url).includes('/member-diaries/view')){
+                if(options?.headers?.['X-RAJ-DIARY-LINK']!=='AbCdEfGhIjKlMnOp')
+                  return Promise.resolve(new Response('{}',{status:404}));
+                return Promise.resolve(new Response(JSON.stringify({diary:{
+                  title:'오늘의 이야기',body:'오늘은 동네 친구와 공원에서 산책했어요.\\n집으로 돌아와 차 한 잔을 마셨어요.',
+                  created_at:'2026-11-21T06:00:00+00:00',reviewed:1
+                }}),{status:200,headers:{'Content-Type':'application/json'}}));
+              }
+              return realFetch(url,options);
+            };
+          }"""
+          with sync_playwright() as p:
+            browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+            for label,w,h in [('small',320,700),('mobile',390,844),('tablet',768,1024),('desktop',1365,900)]:
+              page=browser.new_page(viewport={'width':w,'height':h},device_scale_factor=1)
+              page.add_init_script(inject)
+              errors=[]
+              page.on('pageerror',lambda e:errors.append(str(e)))
+              response=page.goto(root+'/d/#'+token,wait_until='domcontentloaded')
+              assert response.status==200,(label,response.status)
+              page.locator('#diary-article').wait_for(state='visible',timeout=12000)
+              assert '오늘의 이야기' in page.locator('#diary-title').inner_text()
+              assert '공원에서 산책' in page.locator('#diary-body').inner_text()
+              assert page.locator('#diary-body').evaluate('(el)=>getComputedStyle(el).whiteSpace')=='pre-wrap'
+              dimensions=page.evaluate('''() => ({
+                iw:innerWidth,sw:document.documentElement.scrollWidth,
+                paper:(()=>{let r=document.querySelector('.paper').getBoundingClientRect();return [r.left,r.right]})()
+              })''')
+              assert dimensions['sw']<=w+2,(label,'document overflow',dimensions)
+              assert dimensions['paper'][0]>=0 and dimensions['paper'][1]<=w+1,(label,'paper offscreen',dimensions)
+              assert not errors,(label,'JS error',errors)
+              page.screenshot(path='/tmp/diary-screens/'+label+'.png',full_page=True)
+              print('MEMBER_DIARY_PAGE_'+label.upper()+'=PASS',flush=True)
+              page.close()
+            page=browser.new_page()
+            page.goto(root+'/d/',wait_until='domcontentloaded')
+            page.locator('#diary-status').wait_for(state='visible')
+            assert '일기를 열 수 없어요' in page.locator('#diary-status').inner_text()
+            assert page.locator('#diary-article').is_hidden()
+            image=page.request.get(root+'/d/cover.png')
+            assert image.status==200 and image.headers.get('content-type','').startswith('image/png')
+            assert image.body().startswith(b'\x89PNG\r\n\x1a\n')
+            print('PUBLIC_GENERIC_THUMBNAIL_AND_NO_TOKEN_DENIAL=PASS',flush=True)
+            browser.close()
+          PY
+          python3 /tmp/diary-visual-qa.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: member-diary-mobile-render
+          path: /tmp/diary-screens/*.png
+          if-no-files-found: ignore

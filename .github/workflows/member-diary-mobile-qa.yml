@@ -26,7 +26,7 @@ jobs:
           from playwright.sync_api import sync_playwright
           root='http://127.0.0.1:18765'
           token='AbCdEfGhIjKlMnOp'
-          inject="""() => {
+          inject="""(() => {
             const realFetch=window.fetch.bind(window);
             window.fetch=(url,options)=> {
               if(String(url).includes('/member-diaries/view')){
@@ -39,7 +39,7 @@ jobs:
               }
               return realFetch(url,options);
             };
-          }"""
+          })()"""
           with sync_playwright() as p:
             browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
             for label,w,h in [('small',320,700),('mobile',390,844),('tablet',768,1024),('desktop',1365,900)]:
@@ -65,8 +65,7 @@ jobs:
               page.close()
             page=browser.new_page()
             page.goto(root+'/d/',wait_until='domcontentloaded')
-            page.locator('#diary-status').wait_for(state='visible')
-            assert '일기를 열 수 없어요' in page.locator('#diary-status').inner_text()
+            page.wait_for_function("document.querySelector('#diary-status').textContent.includes('이 일기를 열 수 없어요')",timeout=10000)
             assert page.locator('#diary-article').is_hidden()
             image=page.request.get(root+'/d/cover.png')
             assert image.status==200 and image.headers.get('content-type','').startswith('image/png')

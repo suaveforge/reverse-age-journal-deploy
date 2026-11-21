@@ -14,6 +14,7 @@
   let previousRecurringConsent=false;
   let previousParticipantConsent=false;
   let previousSharingConsent=false;
+  let previousArchiveConsent=false;
   let guardianSharingRequested=false;
   const ticketLabels={TRIAL:'체험 충전',PURCHASE:'구매',COMPLETED_CALL:'통화 사용'};
   function switchTab(tab){
@@ -44,6 +45,7 @@
     $('pilot-saved').classList.toggle('ops-away',tab!=='record');
     $('ops-new-person').hidden=tab!=='info'||!subjects.length;
     $('ops-outbox-panel').hidden=tab!=='record'||!hasOutbox;
+    if(tab==='record'&&authorized&&selected)safe(loadArchive);
   }
   function renderCreditHistory(data){
     const target=$('ops-ticket-history');
@@ -72,6 +74,7 @@
     previousRecurringConsent=Boolean(person.recurring_consent);
     previousParticipantConsent=Boolean(person.participant_consent);
     previousSharingConsent=Boolean(person.family_notifications_consent);
+    previousArchiveConsent=Boolean(person.archive_consent);
     guardianSharingRequested=Boolean(person.guardian_sharing_requested);
     const pendingShare=guardianSharingRequested&&!previousSharingConsent;
     $('ops-confirm-consent').hidden=previousParticipantConsent&&!pendingShare;
@@ -88,6 +91,7 @@
     $('ops-edit-consent').checked=Boolean(person.participant_consent);
     $('ops-edit-recurring').checked=Boolean(person.recurring_consent);
     $('ops-edit-family-consent').checked=Boolean(person.family_notifications_consent);
+    $('ops-edit-archive-consent').checked=Boolean(person.archive_consent);
     $('ops-followup-days').value=String(person.followup_days||3);
     $('ops-retry-limit').value=String(person.retry_limit||3);
     $('ops-preferred-hour').value=String(person.preferred_hour??14);
@@ -106,6 +110,10 @@
        !confirm('어르신에게 별도로 정기 전화 및 재통화 동의를 확인하셨습니까?'))return;
     if($('ops-edit-family-consent').checked&&!previousSharingConsent&&
        !confirm('어르신이 가족에게 일기를 공유하는 데 동의하셨습니까?'))return;
+    if($('ops-edit-archive-consent').checked&&!previousArchiveConsent&&
+       !confirm('어르신의 일기 장기 보관 및 본인 요약 문자 발송 동의를 확인하셨습니까?'))return;
+    if(!$('ops-edit-archive-consent').checked&&previousArchiveConsent&&
+       !confirm('일기 아카이브 링크 열람 및 앞으로의 요약 문자 발송을 중단할까요? 보관된 자료 삭제는 기록 메뉴에서 별도 처리합니다.'))return;
     if(!repeat&&previousRecurringConsent&&!confirm('자동 재통화를 끄면 예정된 자동 예약이 취소됩니다. 저장할까요?'))return;
     $('ops-save-profile').disabled=true;
     try{
@@ -116,6 +124,7 @@
           participant_consent:participant,
           recurring_consent:repeat,
           family_notifications_consent:$('ops-edit-family-consent').checked,
+          archive_consent:$('ops-edit-archive-consent').checked,
           followup_days:Number($('ops-followup-days').value),
           retry_limit:Number($('ops-retry-limit').value),
           preferred_hour:Number($('ops-preferred-hour').value)
@@ -247,17 +256,21 @@
       family=$('ops-family-phone').value.trim();
     if(!name){feedback('어르신 이름을 입력해 주세요.',true);return;}
     if(!$('ops-consent').checked){feedback('어르신 동의가 필요합니다.',true);return;}
+    if($('ops-archive-consent').checked &&
+       !confirm('어르신께 일기 장기 보관과 본인 요약 문자 발송 동의를 직접 확인하셨습니까?'))return;
     loading=true;$('ops-add').disabled=true;
     try{
       const data=await request('/subjects',{method:'POST',body:JSON.stringify({
         name,phone:phone||null,family_phone:family||null,participant_consent:true,
         family_notifications_consent:$('ops-family-consent').checked,
+        archive_consent:$('ops-archive-consent').checked,
         recurring_consent:$('ops-recurring-consent').checked
       })});
       selected=data.id;
       for(const id of ['ops-name','ops-phone','ops-family-phone'])$(id).value='';
       $('ops-consent').checked=false;
       $('ops-family-consent').checked=false;
+      $('ops-archive-consent').checked=false;
       $('ops-recurring-consent').checked=false;
       creating=false;
       await loadSubjects();
@@ -323,6 +336,60 @@
         feedback('안내 내용이 복사됐습니다.');
       }));
       card.append(title,body,action);el.append(card);
+    }
+  }
+  async function loadArchive(){
+    const host=$('ops-archive-list');
+    if(!host||!selected){if(host)host.textContent='어르신을 선택해 주세요.';return;}
+    host.textContent='일기를 불러오는 중입니다.';
+    const result=await request('/subjects/'+encodeURIComponent(selected)+'/archive');
+    host.replaceChildren();
+    const items=result.diaries||[];
+    if(!items.length){host.textContent='회원별로 보관된 일기가 없습니다.';return;}
+    for(const item of items){
+      const card=document.createElement('article');card.className='ops-message';
+      card.style.cssText='display:grid;gap:9px;min-width:0;margin-top:12px;padding:14px;border:1px solid #e5e9df;border-radius:12px';
+      const title=document.createElement('strong');title.textContent=item.title;
+      const meta=document.createElement('small');meta.textContent=String(item.created_at||'').slice(0,10)+(item.reviewed?' · 검토 완료':' · 검토 대기');
+      const excerpt=document.createElement('p');excerpt.textContent=item.summary;
+      excerpt.style.cssText='margin:0;overflow-wrap:anywhere';
+      const open=document.createElement('button');open.type='button';open.className='ops-small-button';
+      open.textContent='일기 읽기·검토';
+      const detail=document.createElement('div');detail.hidden=true;detail.style.cssText='min-width:0';
+      open.onclick=()=>safe(async()=>{
+        if(!detail.hidden){detail.hidden=true;return;}
+        const d=await request('/subjects/'+encodeURIComponent(selected)+'/archive/'+encodeURIComponent(item.call_id));
+        detail.replaceChildren();
+        const input=document.createElement('input');input.type='text';input.maxLength=120;input.value=d.diary.title;
+        input.setAttribute('aria-label','일기 제목');input.style.width='100%';
+        const body=document.createElement('textarea');body.value=d.diary.body;body.rows=7;body.maxLength=14000;
+        body.setAttribute('aria-label','전체 일기');body.style.cssText='width:100%;min-width:0;line-height:1.7';
+        const actions=document.createElement('div');actions.style.cssText='display:flex;flex-wrap:wrap;gap:8px';
+        if(!item.reviewed){
+          const approve=document.createElement('button');approve.type='button';approve.className='ops-small-button';
+          approve.textContent='검토 후 승인';
+          approve.onclick=()=>safe(async()=>{
+            if(!input.value.trim()||!body.value.trim())throw Error('제목과 일기를 입력해 주세요.');
+            await request('/subjects/'+encodeURIComponent(selected)+'/archive/'+encodeURIComponent(item.call_id)+'/approve',{
+              method:'POST',body:JSON.stringify({title:input.value.trim(),body:body.value.trim()})
+            });
+            feedback('일기 검토가 완료됐습니다. 가족 공유는 별도 동의가 필요합니다.');
+            await loadArchive();
+          });
+          actions.append(approve);
+        }
+        const del=document.createElement('button');del.type='button';del.className='ops-small-button';
+        del.textContent='이 일기 삭제';
+        del.onclick=()=>safe(async()=>{
+          if(!confirm('이 일기를 서버에서 삭제하고 문자 열람 링크를 무효화할까요? 되돌릴 수 없습니다.'))return;
+          await request('/subjects/'+encodeURIComponent(selected)+'/archive/'+encodeURIComponent(item.call_id),{method:'DELETE'});
+          feedback('해당 일기를 삭제하고 링크를 무효화했습니다.');
+          await loadArchive();
+        });
+        actions.append(del);
+        detail.append(input,body,actions);detail.hidden=false;
+      });
+      card.append(title,meta,excerpt,open,detail);host.append(card);
     }
   }
   async function reload(){
@@ -416,6 +483,7 @@
   function bind(id,handler){$(id).addEventListener('click',()=>safe(handler));}
   bind('ops-add',addSubject);
   bind('ops-save-profile',saveProfile);
+  bind('ops-archive-refresh',()=>safe(loadArchive));
   bind('ops-confirm-consent',confirmConsent);
   bind('ops-new-person',()=>{
     creating=!creating;

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./receive.css?v=20261104-waiting01">
   <script defer src="./config.js"></script>
   <script defer src="https://jssip.net/download/releases/jssip-3.10.0.min.js"></script>
-  <script defer src="./receive.js?v=20261104-direct-answer02"></script>
+  <script defer src="./receive.js?v=20261121-archive01"></script>
   <script defer src="./raj-localizehub.js?v=20261120-p49-05"></script>
 </head>
 <body>
@@ -46,8 +46,9 @@
       <button id="receiver-reconnect" class="action secondary" type="button" hidden>통화 연결 다시 하기</button>
       <div id="receiver-consent-panel" hidden>
         <p>가족이 AI 안부전화를 신청했습니다. 예약 시간과 이후 3일마다 같은 시간에 전화 알림을 받습니다. AI 대화 과정에서 음성을 처리하고 녹음·대화 기록을 만들 수 있습니다. 웹전화에 연결되지 않으면 문자로 전화받기 링크가 발송될 수 있습니다.</p>
-        <p>아래 버튼을 누르면 정기 안부전화, 음성 처리, 녹음에 동의합니다. 동의하지 않으면 누르지 않아도 됩니다.</p>
-        <button id="receiver-consent-confirm" class="action primary" type="button">동의하고 전화 준비</button>
+        <p>통화에서 만든 일기는 기쁜사이 회원 기록으로 장기 보관합니다. 휴대폰 문자로는 짧은 요약과 비공개 열람 링크만 보내며, 자세한 일기는 기쁜사이 사이트에서 보실 수 있습니다. 원하시면 상담사를 통해 보관된 일기를 삭제할 수 있습니다.</p>
+        <p>아래 버튼을 누르면 위 안내의 전화·음성 처리·녹음·회원 일기 보관·본인 문자 안내에 동의합니다. 가족과의 공유는 별도 동의가 필요합니다. 원하지 않으시면 누르지 않아도 됩니다.</p>
+        <button id="receiver-consent-confirm" class="action primary" type="button">안부전화·일기 보관 동의하고 시작</button>
       </div>
       <button id="receiver-alert" class="action secondary" type="button">벨소리 켜기</button>
       <div id="receiver-incoming" hidden>

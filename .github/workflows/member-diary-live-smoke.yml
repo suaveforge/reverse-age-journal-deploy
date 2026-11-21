@@ -1,0 +1,50 @@
+name: Verify live private diary archive and SMS-link page (read-only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - d/index.html
+      - d/cover.png
+      - .github/workflows/member-diary-live-smoke.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check published page, preview, protected API and CORS without sending texts
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE=https://reverse-age-journal.suaveforge.com
+          API=https://api-reverse-age-journal.suaveforge.com:18461
+          for attempt in $(seq 1 24); do
+            if curl -fsSL --max-time 15 "$SITE/d/" -o /tmp/raj-diaries-page && \
+               curl -fsSL --max-time 15 "$SITE/d/cover.png" -o /tmp/raj-diary-preview.png && \
+               grep -Fq '오늘의 일기' /tmp/raj-diaries-page && \
+               grep -Fq 'og:image' /tmp/raj-diaries-page;then
+              break
+            fi
+            if [ "$attempt" = 24 ];then echo 'PUBLIC_DIARY_PAGE_NOT_READY';exit 1;fi
+            sleep 5
+          done
+          node -e "const fs=require('fs');const b=fs.readFileSync('/tmp/raj-diary-preview.png');if(b.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')process.exit(1);console.log('PUBLIC_SMS_THUMBNAIL_PNG=PASS')"
+          curl -fsSL --max-time 15 "$SITE/d/diary-view.js?v=20261121-01" | grep -Fq 'X-RAJ-DIARY-LINK'
+          echo 'PUBLIC_DIARY_PAGE_AND_SCRIPT=PASS'
+          curl -fsS --max-time 15 "$API/api/pilot/healthz" -o /tmp/api-archive-health
+          echo 'PROTECTED_API_HEALTHZ=PASS'
+          CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' "$API/api/pilot/member-diaries/view")
+          test "$CODE" = 404 || { echo "ANON_ARCHIVE_READ_UNEXPECTED_HTTP_$CODE";exit 1; }
+          CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' -H 'X-RAJ-DIARY-LINK: AbCdEfGhIjKlMnOp' "$API/api/pilot/member-diaries/view")
+          test "$CODE" = 404 || { echo "FAKE_ARCHIVE_TOKEN_UNEXPECTED_HTTP_$CODE";exit 1; }
+          echo 'PRIVATE_DIARY_UNAUTHORIZED_ACCESS_DENIED=PASS'
+          curl -sS --max-time 15 -D /tmp/diary-cors-headers -o /dev/null -X OPTIONS \
+            -H "Origin: $SITE" \
+            -H 'Access-Control-Request-Method: GET' \
+            -H 'Access-Control-Request-Headers: X-RAJ-DIARY-LINK' \
+            "$API/api/pilot/member-diaries/view"
+          grep -iq 'access-control-allow-headers:.*X-RAJ-DIARY-LINK' /tmp/diary-cors-headers
+          echo 'PRIVATE_DIARY_LINK_CORS=PASS'
+          echo 'NO_REAL_SMS_OR_RETELL_CALLS=TRUE'

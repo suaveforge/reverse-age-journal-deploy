@@ -21,8 +21,8 @@
   <script defer src="./config.js?v=cycle-20261101-05"></script>
   <script defer src="./app.cycle07.js"></script>
   <script defer src="./pilot.cycle07.js?v=20261103-retell-v3-01"></script>
-  <script defer src="./operations.cycle07.js?v=20261101-unified03"></script>
-  <script defer src="./family-demo.cycle07.js?v=20261104-sms-direct02"></script>
+  <script defer src="./operations.cycle07.js?v=20261121-archive01"></script>
+  <script defer src="./family-demo.cycle07.js?v=20261121-archive01"></script>
   <script defer src="./receiver-bridge.js?v=20261103-home-sip01"></script>
   <script defer src="./raj-localizehub.js?v=20261120-p49-05"></script>
   <script defer src="./dev-community.js?v=20261120-clipboard-02"></script>
@@ -192,6 +192,7 @@
             </div>
             <label class="pilot-checkline"><input id="ops-consent" type="checkbox"><span>AI 통화·녹음·기록 동의</span></label>
             <label class="pilot-checkline"><input id="ops-family-consent" type="checkbox"><span>가족 알림 동의</span></label>
+            <label class="pilot-checkline"><input id="ops-archive-consent" type="checkbox"><span>회원별 일기 장기 보관 및 본인 요약 문자 동의</span></label>
             <label class="pilot-checkline"><input id="ops-recurring-consent" type="checkbox"><span>자동 재통화·예약전화 동의</span></label>
             <button id="ops-add" class="big-button outline" type="button">어르신 등록 <span aria-hidden="true">+</span></button>
           </div>
@@ -237,6 +238,7 @@
               <label><input id="ops-edit-consent" type="checkbox"> 통화 동의</label>
               <label><input id="ops-edit-recurring" type="checkbox"> 자동 재통화</label>
               <label><input id="ops-edit-family-consent" type="checkbox"> 가족 알림</label>
+              <label><input id="ops-edit-archive-consent" type="checkbox"> 일기 장기 보관·본인 요약 문자</label>
             </div>
             <button id="ops-save-profile" type="button" class="big-button primary ops-full-button">
               <span>저장</span><span aria-hidden="true">✓</span>
@@ -283,6 +285,12 @@
             </div>
             <textarea id="ops-report-output" readonly rows="7" hidden></textarea>
             <button id="ops-report-copy" type="button" class="pilot-text-action" hidden>보고서 복사</button>
+          </div>
+          <div class="pilot-management-card" id="ops-archive-panel" data-ops-panel="record">
+            <h4>회원별 일기 보관함</h4>
+            <p class="pilot-description">회원별로 누적 보관된 일기입니다. 가족에게는 검토·공유 동의 후에만 보입니다.</p>
+            <button type="button" class="pilot-text-action" id="ops-archive-refresh">일기 불러오기</button>
+            <div id="ops-archive-list" class="ops-outbox" aria-live="polite">어르신을 선택해 주세요.</div>
           </div>
           <div class="pilot-management-card" id="ops-outbox-panel" data-ops-panel="record">
             <h4>가족 알림</h4>

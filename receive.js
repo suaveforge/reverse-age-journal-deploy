@@ -887,7 +887,7 @@
     // Start resume() during this user gesture: Safari does not grant it after fetch.
     const unlock=unlockBell().catch(()=>false);
     try{
-      await api('consent',{method:'POST',body:JSON.stringify({accept:true})});
+      await api('consent',{method:'POST',body:JSON.stringify({accept:true,archive_consent:true})});
       initializeAsteriskSip().catch(()=>{});
       const allowed=await unlock;
       show('receiver-consent-panel',false);

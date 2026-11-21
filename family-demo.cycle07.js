@@ -396,7 +396,26 @@
       }else if(summary.shared&&Array.isArray(summary.reports)&&summary.reports.length){
         list.innerHTML='<h2 class="family-summary-title">가족에게 공유된 일기</h2>'+
           summary.reports.map(item=>'<article class="family-shared-summary"><strong>'+esc(item.title)+'</strong>'+
-          '<p>'+esc(item.excerpt)+'</p></article>').join('');
+          '<p>'+esc(item.excerpt)+'</p>'+
+          (item.archived&&/^call_[A-Za-z0-9_-]{3,100}$/.test(item.call_id)
+            ?'<button class="family-button outline family-archive-open" type="button" data-archive-call="'+esc(item.call_id)+'">전체 일기 읽기</button><p class="family-archive-body" hidden></p>'
+            :'')+'</article>').join('');
+        list.querySelectorAll('.family-archive-open').forEach(open=>{
+          open.addEventListener('click',async()=>{
+            const body=open.nextElementSibling;
+            open.disabled=true;
+            try{
+              const data=await request('/archive/'+encodeURIComponent(open.dataset.archiveCall));
+              body.textContent=data?.diary?.body||'내용을 불러올 수 없습니다.';
+              body.style.whiteSpace='pre-wrap';
+              body.style.lineHeight='1.8';
+              body.hidden=false;
+              open.textContent='전체 일기 열림';
+            }catch(e){
+              tell(e.message);open.disabled=false;
+            }
+          });
+        });
       }else if(profile.share_approved){
         list.innerHTML='<p class="family-primary-message">상담 후 일기가 저장되면 이곳에서 볼 수 있습니다.</p>';
       }else{
